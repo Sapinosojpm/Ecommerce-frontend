@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import Title from '../components/Title';
-import axios from 'axios';
-import { backendUrl } from '../../../admin/src/App'; // Ensure this path is correct
+import axios from 'axios'; // Ensure this path is correct
 import { Link } from 'react-router-dom';
 import Lenis from "lenis";
+
+const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const Contact = () => {
   const [contactData, setContactData] = useState(null);
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { backendUrl } from "../../../admin/src/App";
 
+const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const VoucherListComponent = ({ onClose }) => {
   const [vouchers, setVouchers] = useState([]);
   const [claimedVouchers, setClaimedVouchers] = useState([]);

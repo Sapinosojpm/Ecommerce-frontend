@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { backendUrl } from "../../../admin/src/App";
 
+const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const JobPostingPopup = ({ open, onClose }) => {
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
@@ -24,41 +24,41 @@ const JobPostingPopup = ({ open, onClose }) => {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-8 rounded-lg w-full max-w-4xl shadow-xl relative">
-        <h2 className="text-2xl font-semibold text-green-700 mb-6 text-center">Job Postings</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="relative w-full max-w-4xl p-8 bg-white rounded-lg shadow-xl">
+        <h2 className="mb-6 text-2xl font-semibold text-center text-green-700">Job Postings</h2>
 
-        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-green-500 scrollbar-track-gray-100">
+        <div className="overflow-y-auto max-h-96 scrollbar-thin scrollbar-thumb-green-500 scrollbar-track-gray-100">
           {jobs.length > 0 ? (
             jobs.map((jobItem) => (
-              <div key={jobItem._id} className="flex items-center gap-6 mb-6 p-6 rounded-lg border border-gray-200 shadow-md hover:shadow-lg transition-transform">
+              <div key={jobItem._id} className="flex items-center gap-6 p-6 mb-6 transition-transform border border-gray-200 rounded-lg shadow-md hover:shadow-lg">
                 {jobItem.image && (
-                  <div className="w-48 h-48 flex-shrink-0 cursor-pointer" onClick={() => setLightboxImage(`${backendUrl}${jobItem.image}`)}>
-                    <img src={`${backendUrl}/${jobItem.image.replace(/\\/g, "/")}`} alt={jobItem.title} className="w-full h-full object-cover rounded-lg hover:scale-105 transition-transform" />
+                  <div className="flex-shrink-0 w-48 h-48 cursor-pointer" onClick={() => setLightboxImage(`${backendUrl}${jobItem.image}`)}>
+                    <img src={`${backendUrl}/${jobItem.image.replace(/\\/g, "/")}`} alt={jobItem.title} className="object-cover w-full h-full transition-transform rounded-lg hover:scale-105" />
                   </div>
                 )}
                 <div>
                   <h3 className="text-xl font-bold text-gray-800">{jobItem.title}</h3>
-                  <p className="text-gray-600 my-3">{jobItem.description}</p>
-                  <button onClick={() => handleApplyClick(jobItem)} className="inline-block mt-4 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition">
+                  <p className="my-3 text-gray-600">{jobItem.description}</p>
+                  <button onClick={() => handleApplyClick(jobItem)} className="inline-block px-4 py-2 mt-4 text-white transition bg-green-600 rounded-md hover:bg-green-700">
                     Apply Now
                   </button>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-gray-500 text-center">No job postings available at the moment.</p>
+            <p className="text-center text-gray-500">No job postings available at the moment.</p>
           )}
         </div>
 
-        <button onClick={onClose} className="w-full bg-gray-800 text-white py-2 rounded-md mt-4 hover:bg-gray-900 transition">
+        <button onClick={onClose} className="w-full py-2 mt-4 text-white transition bg-gray-800 rounded-md hover:bg-gray-900">
           Close
         </button>
       </div>
 
       {/* Lightbox for Image Preview */}
       {lightboxImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" onClick={() => setLightboxImage(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80" onClick={() => setLightboxImage(null)}>
           <img src={lightboxImage} alt="Job Preview" className="max-w-3xl max-h-screen rounded-lg shadow-lg" />
         </div>
       )}
@@ -114,34 +114,34 @@ const ApplyModal = ({ job, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-lg">
-        <h2 className="text-xl font-semibold text-center mb-4">Apply for {job.title}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="w-full max-w-lg p-6 bg-white rounded-lg shadow-lg">
+        <h2 className="mb-4 text-xl font-semibold text-center">Apply for {job.title}</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium">First Name</label>
-            <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="w-full border p-2 rounded" required />
+            <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className="w-full p-2 border rounded" required />
           </div>
           <div>
             <label className="block text-sm font-medium">Last Name</label>
-            <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="w-full border p-2 rounded" required />
+            <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className="w-full p-2 border rounded" required />
           </div>
           <div>
             <label className="block text-sm font-medium">Address</label>
-            <input type="text" name="address" value={formData.address} onChange={handleChange} className="w-full border p-2 rounded" required />
+            <input type="text" name="address" value={formData.address} onChange={handleChange} className="w-full p-2 border rounded" required />
           </div>
           <div>
             <label className="block text-sm font-medium">Experience</label>
-            <textarea name="experience" value={formData.experience} onChange={handleChange} className="w-full border p-2 rounded" rows="3" required></textarea>
+            <textarea name="experience" value={formData.experience} onChange={handleChange} className="w-full p-2 border rounded" rows="3" required></textarea>
           </div>
           <div>
             <label className="block text-sm font-medium">Upload Resume</label>
-            <input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx" className="w-full border p-2 rounded" required />
+            <input type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx" className="w-full p-2 border rounded" required />
           </div>
           <div className="flex justify-between">
-            <button type="button" onClick={onClose} className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600">Cancel</button>
-            <button type="submit" className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700">Submit Application</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 text-white bg-gray-500 rounded-md hover:bg-gray-600">Cancel</button>
+            <button type="submit" className="px-4 py-2 text-white bg-green-600 rounded-md hover:bg-green-700">Submit Application</button>
           </div>
         </form>
       </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
-import { backendUrl } from "../../../admin/src/App";
 import { Send, X } from "lucide-react";
 
+const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const AIPopup = ({ isOpen, onClose }) => {
   const [message, setMessage] = useState("");
   const [responses, setResponses] = useState([]);
@@ -76,33 +76,33 @@ const AIPopup = ({ isOpen, onClose }) => {
       }`}
     >
       {/* Header */}
-      <div className="flex justify-between items-center pb-3 border-b">
+      <div className="flex items-center justify-between pb-3 border-b">
         <span className="text-lg font-semibold text-gray-900">AI Assistant</span>
         <div className="flex space-x-3">
-          <button className="text-gray-600 hover:text-blue-500 transition" onClick={clearChat}>
+          <button className="text-gray-600 transition hover:text-blue-500" onClick={clearChat}>
             Clear
           </button>
-          <button className="text-gray-600 hover:text-red-500 transition" onClick={onClose}>
+          <button className="text-gray-600 transition hover:text-red-500" onClick={onClose}>
             <X size={24} />
           </button>
         </div>
       </div>
 
       {/* Chat Messages */}
-      <div className="flex-grow overflow-y-auto space-y-2 max-h-64 p-2 bg-gray-50 rounded-lg shadow-inner">
+      <div className="flex-grow p-2 space-y-2 overflow-y-auto rounded-lg shadow-inner max-h-64 bg-gray-50">
         {responses.map((msg, index) => (
           <div key={index} className="flex flex-col space-y-2">
             {msg.user && (
               <div className="flex justify-end">
-                <div className="bg-green-500 text-white px-4 py-2 rounded-xl max-w-xs text-sm shadow-md">
+                <div className="max-w-xs px-4 py-2 text-sm text-white bg-green-500 shadow-md rounded-xl">
                   {msg.user}
-                  <div className="text-xs text-gray-200 text-right">{msg.timestamp?.toLocaleTimeString()}</div>
+                  <div className="text-xs text-right text-gray-200">{msg.timestamp?.toLocaleTimeString()}</div>
                 </div>
               </div>
             )}
             {msg.ai && (
               <div className="flex justify-start">
-                <div className="bg-gray-200 px-4 py-2 rounded-xl max-w-xs text-sm shadow-md text-gray-900">
+                <div className="max-w-xs px-4 py-2 text-sm text-gray-900 bg-gray-200 shadow-md rounded-xl">
                   {msg.ai}
                   <div className="text-xs text-gray-500">{msg.timestamp?.toLocaleTimeString()}</div>
                 </div>
@@ -114,23 +114,23 @@ const AIPopup = ({ isOpen, onClose }) => {
       </div>
 
       {/* Input Form */}
-      <form className="flex items-center border rounded-full overflow-hidden shadow-md" onSubmit={handleSubmit}>
+      <form className="flex items-center overflow-hidden border rounded-full shadow-md" onSubmit={handleSubmit}>
         <input
           ref={inputRef}
           type="text"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="flex-grow p-3 outline-none text-gray-800 border-none bg-white rounded-l-full"
+          className="flex-grow p-3 text-gray-800 bg-white border-none rounded-l-full outline-none"
           placeholder="Ask something..."
           required
         />
         <button
           type="submit"
-          className="bg-green-500 text-white p-3 flex items-center justify-center hover:bg-green-600 transition rounded-r-full"
+          className="flex items-center justify-center p-3 text-white transition bg-green-500 rounded-r-full hover:bg-green-600"
           disabled={isLoading}
         >
           {isLoading ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white"></div>
+            <div className="w-5 h-5 border-t-2 border-b-2 border-white rounded-full animate-spin"></div>
           ) : (
             <Send size={20} />
           )}

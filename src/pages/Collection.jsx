@@ -4,10 +4,9 @@ import { ShopContext } from '../context/ShopContext';
 import { assets } from '../assets/assets';
 import Title from '../components/Title';
 import ProductItem from '../components/ProductItem';
-import { backendUrl } from '../../../admin/src/App';
 import Lenis from "lenis";
 
-
+const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const Collection = () => {
   const { products, search, showSearch } = useContext(ShopContext);
   const [showFilter, setShowFilter] = useState(false);
