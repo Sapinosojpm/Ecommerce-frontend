@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { assets } from "../../../admin/src/assets/assets";
 import { Link } from "react-router-dom";
 import '../css/Footer.css'; // Import custom CSS
 
