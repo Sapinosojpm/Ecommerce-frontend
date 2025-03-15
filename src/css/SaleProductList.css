@@ -1,0 +1,9 @@
+/* In SaleProductsList.css */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;  /* Hides the scrollbar */
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none !important;  /* IE 10+ */
+  scrollbar-width: none !important;  /* Firefox */
+}

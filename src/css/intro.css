@@ -1,0 +1,15 @@
+#section2-content{
+    
+}
+
+@media (max-width: 640px){
+    #section2-content{
+        margin:0;
+        padding:0;
+        padding-bottom: 2rem;
+    }
+    iframe{
+        width:100%;
+        height:310px;
+    }
+}

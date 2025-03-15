@@ -1,0 +1,25 @@
+#Track{
+    font-size:1rem;
+    
+}
+#cancel{
+    font-size:1rem;
+    padding:6px
+}
+
+#Track:hover{
+    scale:1.05;
+}
+#Track:active{
+    background-color:green;
+    color:white
+}
+
+#cancel:hover{
+    scale:1.05;
+}
+
+#cancel:active{
+    background-color:green;
+    color:white
+}

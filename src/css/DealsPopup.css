@@ -1,0 +1,69 @@
+/* Pop In Animation for scaling */
+@keyframes popIn {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Green to Black Color Change Animation */
+@keyframes colorChange {
+  0% {
+    color: #32CD32; /* Lime Green */
+  }
+  25% {
+    color: #228B22; /* Forest Green */
+  }
+  50% {
+    color: #006400; /* Dark Green */
+  }
+  75% {
+    color: #008000; /* Green */
+  }
+  100% {
+    color: #000000; /* Black */
+  }
+}
+
+/* Infinite Scale Animation */
+/* @keyframes scaleInfinite {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+} */
+
+/* Popup Styles */
+.bg-gradient-to-r {
+  background: linear-gradient(to right, #32CD32, #000000, #32CD32);
+}
+
+/* Title Styling */
+h2 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #32CD32; /* Lime Green by default */
+  animation: scaleInfinite 3s ease-in-out infinite; /* Infinite scaling effect */
+}
+
+/* Button Styles */
+/* button {
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+} */
+
+/* button:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+} */

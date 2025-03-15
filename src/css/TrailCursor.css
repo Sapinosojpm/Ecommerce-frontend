@@ -1,0 +1,8 @@
+.bird {
+  position: fixed; /* Keeps it in the viewport */
+  width: 50px;
+  height: auto;
+  pointer-events: none; /* Avoid blocking clicks */
+  transition: transform 0.1s ease-out;
+  z-index: 9999;
+}

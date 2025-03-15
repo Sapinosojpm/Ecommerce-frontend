@@ -1,0 +1,125 @@
+.button-container {
+  width: 160px; /* Set a fixed width */
+  height: 48px; /* Set a fixed height */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: 0.3s
+}
+
+.button-container:hover {
+  box-shadow: 0px 18px 10px rgba(0, 0, 0, 0.2);
+  scale: 1.05;
+}
+
+.button-text {
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  white-space: nowrap; /* Prevents text from wrapping */
+}
+
+/* Cart Icon Animation */
+@keyframes cart-fast {
+  0% {
+    transform: translateX(-120px) rotate(-20deg) scale(0.85);
+    opacity: 1;
+  }
+  5% {
+    transform: translateX(-100px) rotate(-18deg) scale(0.9);
+  }
+  10% {
+    transform: translateX(-80px) rotate(-15deg) scale(0.95);
+  }
+  15% {
+    transform: translateX(-60px) rotate(-12deg) scale(1);
+  }
+  20% {
+    transform: translateX(-40px) rotate(-8deg) scale(1.05);
+  }
+  25% {
+    transform: translateX(-20px) rotate(-5deg) scale(1.02);
+  }
+  30% {
+    transform: translateX(0px) rotate(0deg) scale(1);
+  }
+  35% {
+    transform: translateX(20px) rotate(3deg) scale(1.02);
+  }
+  40% {
+    transform: translateX(40px) rotate(5deg) scale(1);
+  }
+  45% {
+    transform: translateX(60px) rotate(8deg) scale(0.98);
+  }
+  50% {
+    transform: translateX(80px) rotate(10deg) scale(0.96);
+    opacity: 1;
+  }
+  55% {
+    transform: translateX(100px) rotate(12deg) scale(0.95);
+  }
+  60% {
+    transform: translateX(120px) rotate(14deg) scale(0.94);
+  }
+  65% {
+    transform: translateX(140px) rotate(15deg) scale(0.92);
+  }
+  70% {
+    transform: translateX(160px) rotate(16deg) scale(0.9);
+    opacity: 0.9;
+  }
+  75% {
+    transform: translateX(180px) rotate(17deg) scale(0.88);
+  }
+  80% {
+    transform: translateX(200px) rotate(18deg) scale(0.86);
+    opacity: 0.8;
+  }
+  85% {
+    transform: translateX(220px) rotate(19deg) scale(0.84);
+  }
+  90% {
+    transform: translateX(240px) rotate(20deg) scale(0.82);
+    opacity: 0.6;
+  }
+  95% {
+    transform: translateX(260px) rotate(21deg) scale(0.8);
+  }
+  100% {
+    transform: translateX(280px) rotate(22deg) scale(0.78);
+    opacity: 0;
+  }
+}
+
+/* Apply animation */
+.animate-cart-fast {
+  animation: cart-fast 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  will-change: transform, opacity;
+  transform: translateZ(0); /* Forces GPU acceleration */
+}
+
+
+
+/* Left-to-Right Liquid Fill Effect */
+@keyframes liquid-fill-ltr {
+  from {
+    background: linear-gradient(to right, transparent 0%, #22c55e 0%);
+    width: 0%;
+    opacity: 0;
+  }
+  to {
+    background: #22c55e;
+    width: 100%;
+    opacity: 1;
+  }
+}
+
+.animate-liquid-fill-ltr {
+  position: absolute;
+  height: 100%;
+  will-change: transform, opacity;
+  animation: liquid-fill-ltr 2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  transform: translateZ(0); /* Forces GPU acceleration */
+}
+

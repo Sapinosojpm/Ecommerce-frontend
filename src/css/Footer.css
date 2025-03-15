@@ -1,0 +1,53 @@
+/* Footer.css */
+.footer {
+    position: relative;
+    background-color:rgb(0, 102, 0); /* Dark green */
+    padding: 2rem 0;
+    margin-top: 3rem;
+    text-align: white;
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2); /* Adds a shadow around the footer */
+    transition: all 0.3s ease-in-out; /* Smooth transition for hover effects */
+  }
+  
+  .footer:hover {
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4); /* Stronger shadow on hover for 3D effect */
+  
+  }
+  
+  /* Adding animated pulsing background effect */
+  .footer::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background-color: #004d00; /* Darker green for depth */
+    filter: blur(50px);
+    transform: scale(1.5);
+    z-index: 0;
+    animation: shadowPulse 3s infinite ease-in-out;
+  }
+  
+  @keyframes shadowPulse {
+    0% {
+      transform: scale(1.5);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.6);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(1.5);
+      opacity: 0.5;
+    }
+  }
+  
+  /* Content inside the footer should sit on top of the animated background */
+  .container {
+    position: relative;
+    z-index: 1;
+  }
+  
