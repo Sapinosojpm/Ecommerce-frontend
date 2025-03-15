@@ -4,7 +4,6 @@ import { assets } from '../assets/assets';
 import axios from 'axios';
 import Map3D from '../components/Map3D';
 import Lenis from 'lenis';
-import { backendUrl } from '../../../admin/src/App'; // ✅ Import backendUrl
 const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const About = () => {
   const [aboutData, setAboutData] = useState(null);
