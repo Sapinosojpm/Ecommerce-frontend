@@ -7,7 +7,7 @@ export const ShopContext = createContext();
 
 const ShopContextProvider = (props) => {
   const currency = "₱ ";
-  
+
   const [regions, setRegions] = useState({}); // Initially empty
   const [region, setRegion] = useState("Luzon"); // Default region
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -15,7 +15,7 @@ const ShopContextProvider = (props) => {
   const [showSearch, setShowSearch] = useState(false);
   const [role, setRole] = useState(localStorage.getItem("role") || null);
   const [discountPercent, setDiscountPercent] = useState(0); // Initialize discountPercent
-  const [discountCode, setDiscountCode] = useState('');
+  const [discountCode, setDiscountCode] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState(""); // Store YouTube URL
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [weight, setWeight] = useState(0);
@@ -25,12 +25,68 @@ const ShopContextProvider = (props) => {
   const [intros, setIntros] = useState([]); // Add state for cards
   const [feePerKilo, setFeePerKilo] = useState(""); // Default value
   const [voucher1, setVoucher1] = useState(null);
-  const [voucherAmountDiscount, setVoucherAmountDiscount] = useState(0);
+
+  const [voucherAmountDiscount, setVoucherAmountDiscount] = useState({
+    code: "",
+    amount: 0,
+    minimumPurchase: 0,
+  });
+  const [buyNowItem, setBuyNowItem] = useState(null);
+
+  // Add this to your ShopContext.jsx
+  // Update the handleBuyNow function
+  // In ShopContext.jsx, update the handleBuyNow function
+  const handleBuyNow = async (itemId, quantity, variations = {}) => {
+    try {
+      const itemInfo = products.find((product) => product._id === itemId);
+
+      if (!itemInfo) {
+        toast.error("Product not found");
+        return;
+      }
+
+      // Calculate variation adjustment
+      const variationAdjustment = Object.values(variations).reduce(
+        (sum, opt) => sum + (opt.priceAdjustment || 0),
+        0
+      );
+
+      const itemWithVariations = {
+        ...itemInfo,
+        quantity,
+        variations,
+        price: itemInfo.price + variationAdjustment,
+        originalPrice: itemInfo.price,
+        variationAdjustment,
+        weight: itemInfo.weight || 0,
+      };
+
+      // Clear any existing cart items
+      setCartItems({});
+
+      // Set the buy now item
+      setBuyNowItem(itemWithVariations);
+
+      // Navigate to place order
+      navigate("/place-order");
+    } catch (error) {
+      console.error("Error in handleBuyNow:", error);
+      toast.error("Failed to process Buy Now");
+    }
+  };
+
+  useEffect(() => {
+    if (buyNowItem) {
+      console.log("✅ Buy Now Item Set:", buyNowItem);
+    }
+  }, [buyNowItem]);
 
   useEffect(() => {
     const fetchFeePerKilo = async () => {
       try {
-        const response = await axios.get(`${backendUrl}/api/weight/fee-per-kilo`);
+        const response = await axios.get(
+          `${backendUrl}/api/weight/fee-per-kilo`
+        );
         if (response.data.success) {
           setFeePerKilo(response.data.fee);
         }
@@ -45,13 +101,13 @@ const ShopContextProvider = (props) => {
     try {
       const response = await axios.get(`${backendUrl}/api/regions`);
       console.log("📦 API Response:", response.data);
-  
+
       if (Array.isArray(response.data)) {
         const regionData = response.data.reduce((acc, region) => {
           acc[region.name] = region.fee;
           return acc;
         }, {});
-  
+
         console.log("🗺 Processed Region Data:", regionData);
         setRegions(regionData);
       } else {
@@ -68,47 +124,73 @@ const ShopContextProvider = (props) => {
     fetchRegions();
   }, []);
 
-  
+  // const [cartItems, setCartItems] = useState(() => {
+  //   const savedCart = JSON.parse(localStorage.getItem("cartItems"));
+  //   return savedCart || {};
+  // });
 
-  const [cartItems, setCartItems] = useState(() => {
-    const savedCart = JSON.parse(localStorage.getItem("cartItems"));
-    return savedCart || {};
-  });
-  
+  const applyVoucher = (discountPercent, voucherData = {}) => {
+    setVoucherDiscount(discountPercent);
+    setVoucherAmountDiscount({
+      code: voucherData.code || "",
+      amount: voucherData.amount || 0,
+      minimumPurchase: voucherData.minimumPurchase || 0,
+    });
+  };
 
+  const getTotalAmount = () => {
+    if (buyNowItem) {
+      // Calculate total for buyNowItem
+      const itemTotal = buyNowItem.price * buyNowItem.quantity;
+      const discountAmount = ((buyNowItem.discount || 0) / 100) * itemTotal;
+      const voucherAmount = voucherAmountDiscount.amount || 0;
 
-const applyVoucher = (discountPercent,amount=0) => {
-  setVoucherDiscount(discountPercent);
-  setVoucherAmountDiscount(amount); // Fixed amount
-};
+      // Calculate weight fee for buyNowItem
+      const itemWeight = buyNowItem.weight || 0;
+      const weightFee = itemWeight * feePerKilo * buyNowItem.quantity;
+      const baseFee = regions[region] || 0;
+      const shippingFee = baseFee + weightFee;
 
+      console.log("🛒 Buy Now Calculation:", {
+        itemTotal,
+        discountAmount,
+        voucherAmount,
+        itemWeight,
+        weightFee,
+        baseFee,
+        shippingFee,
+        finalTotal: itemTotal - discountAmount - voucherAmount + shippingFee,
+      });
 
-const getTotalAmount = () => {
-  const cartAmount = getCartAmount(); // Total cart amount (now a number)
-  const discountAmount = getDiscountAmount(); // Discount amount  
-  const voucherAmount = ((voucherDiscount || 0) / 100) * cartAmount; // Percentage-based voucher  
-  const voucherAmount1 = voucherAmountDiscount || 0; // ✅ Fixed amount discount  
-  const shippingFee = delivery_fee || 0; // ✅ Shipping fee  
+      return itemTotal - discountAmount - voucherAmount + shippingFee;
+    }
 
-  // ✅ Make sure to subtract both discount types
-  const finalTotal = cartAmount - discountAmount - voucherAmount - voucherAmount1 + shippingFee;
+    // Original cart calculation
+    const cartAmount = Number(getCartAmount()) || 0;
+    const discountAmount = Number(getDiscountAmount()) || 0;
+    const voucherAmount = ((Number(voucherDiscount) || 0) / 100) * cartAmount;
+    const voucherAmount1 = Number(voucherAmountDiscount.amount) || 0;
+    const shippingFee = Number(delivery_fee) || 0;
 
-  console.log("🛒 Cart Amount:", cartAmount);
-  console.log("🎟 Discount Amount:", discountAmount);
-  console.log("💰 Voucher Discount (Percentage):", voucherAmount);
-  console.log("💰 Voucher Discount (Fixed):", voucherAmount1);
-  console.log("🚚 Shipping Fee:", shippingFee);
-  console.log("💳 Final Total:", finalTotal);
+    // Calculate final total with all discounts
+    const finalTotal =
+      cartAmount -
+      discountAmount -
+      voucherAmount -
+      voucherAmount1 +
+      shippingFee;
 
-  return finalTotal;
-};
+    console.log("🛒 Final Calculation:", {
+      cartAmount,
+      discountAmount,
+      voucherAmount,
+      voucherAmount1,
+      shippingFee,
+      finalTotal,
+    });
 
-
-
-
-
-
-
+    return finalTotal;
+  };
 
   const applyDiscount = (discountPercent) => {
     console.log("🔄 Applying Discount:", discountPercent);
@@ -118,8 +200,6 @@ const getTotalAmount = () => {
   useEffect(() => {
     console.log("🔄 Voucher Amount Discount Updated:", voucherAmountDiscount);
   }, [voucherAmountDiscount]);
-  
-
 
   const getDiscountAmount = () => {
     const cartAmount = getCartAmount();
@@ -129,39 +209,37 @@ const getTotalAmount = () => {
     return discount || 0;
   };
 
-
   const [products, setProducts] = useState([]);
   const [token, setToken] = useState("");
   const navigate = useNavigate();
 
-
-
-  const fetchProduct = async (productId) => {
-    try {
-      const response = await fetch(`${backendUrl}/api/product/${productId}`);
-      if (!response.ok) throw new Error("Failed to fetch product");
-      return await response.json();
-    } catch (error) {
-      console.error("Error fetching product:", error);
-      return null;
+  const [cartItems, setCartItems] = useState(() => {
+    // Only use localStorage cart if user is not logged in
+    if (!token) {
+      const savedCart = JSON.parse(localStorage.getItem("cartItems"));
+      return savedCart || {};
     }
-  };
-  
-
+    return {}; // Start with empty cart if logged in (will be populated by API)
+  });
 
   useEffect(() => {
     localStorage.setItem("role", role);
   }, [role]);
-  
 
   const delivery_fee = useMemo(() => {
     const baseFee = regions[region] || 0;
-    const weightFee = weight * feePerKilo;
+
+    if (buyNowItem) {
+      // Calculate weight fee for buyNowItem
+      const weightFee =
+        (buyNowItem.weight || 0) * (feePerKilo || 0) * buyNowItem.quantity;
+      return baseFee + weightFee;
+    }
+
+    // Regular cart calculation
+    const weightFee = weight * (feePerKilo || 0);
     return baseFee + weightFee;
-  }, [region, regions, weight, feePerKilo]);
-  
-
-
+  }, [region, regions, weight, feePerKilo, buyNowItem]);
 
   // Save cart to localStorage whenever cartItems change
   useEffect(() => {
@@ -176,38 +254,133 @@ const getTotalAmount = () => {
     console.log("🔄 Discount Percent Updated:", discountPercent);
   }, [discountPercent]);
 
-
-
   useEffect(() => {
     console.log("📦 Total Cart Weight Updated:", weight);
   }, [weight]);
-  
-  
-  
+
   // Add product to cart
-  const addToCart = async (itemId, quantity) => {
-    if (quantity < 0) {
-      toast.error("Quantity cannot be negative.");
+  const addToCart = async (itemId, quantity, variations = null) => {
+    console.log("🧪 Adding to Cart:", { itemId, quantity, variations });
+    const itemInfo = products.find((product) => product._id === itemId);
+  
+    if (!itemInfo) {
+      toast.error("Product not found");
       return;
     }
-
-    const updatedCart = { ...cartItems, [itemId]: quantity };
-    if (quantity === 0) delete updatedCart[itemId];
-
+  
+    // Validate variations
+    const selectedVariations = {};
+    if (variations) {
+      for (const [variationName, option] of Object.entries(variations)) {
+        const productVariation = itemInfo.variations.find(v => v.name === variationName);
+        if (!productVariation) {
+          toast.error(`Variation ${variationName} not found for this product`);
+          return;
+        }
+        
+        const validOption = productVariation.options.find(o => o.name === option.name);
+        if (!validOption) {
+          toast.error(`Invalid option ${option.name} for variation ${variationName}`);
+          return;
+        }
+        
+        selectedVariations[variationName] = {
+          name: option.name,
+          priceAdjustment: option.priceAdjustment || 0
+        };
+      }
+    }
+  
+    // Calculate variation adjustment
+    const variationAdjustment = Object.values(selectedVariations).reduce(
+      (sum, opt) => sum + (opt.priceAdjustment || 0),
+      0
+    );
+  
+    // Update cart in local state
+    const updatedCart = {
+      ...cartItems,
+      [itemId]: {
+        quantity,
+        variations: selectedVariations,
+        variationAdjustment,
+        finalPrice: itemInfo.price + variationAdjustment
+      },
+    };
+  
     setCartItems(updatedCart);
 
+    // If user is logged in (token available), update cart in the backend
     if (token) {
       try {
+        // Send complete item data to backend
         await axios.post(
-          `${backendUrl}/api/cart/update`,
-          { itemId, quantity },
+          `${backendUrl}/api/cart/add`,
+          {
+            userId: localStorage.getItem("userId"),
+            itemId,
+            quantity,
+            variations,
+            variationAdjustment,
+            finalPrice: itemInfo.price + variationAdjustment,
+          },
           { headers: { token } }
         );
+        toast.success("Item added to cart");
       } catch (error) {
         console.error("Failed to update cart in the database:", error);
         toast.error("Failed to update the cart. Please try again.");
+        // Revert local state if API call fails
+        setCartItems(cartItems);
       }
     }
+  };
+
+  // New buyNow function
+  const buyNow = async (productId, quantity, variations = null) => {
+    console.log("Buy now :", { itemId, quantity, variations });
+    if (quantity <= 0) {
+      toast.error("Quantity must be greater than 0");
+      return;
+    }
+
+    // Create temporary cart with just this item
+    const tempCart = {
+      [productId]: {
+        quantity,
+        variations,
+      },
+    };
+
+    setCartItems(tempCart);
+    localStorage.setItem("cartItems", JSON.stringify(tempCart));
+
+    if (token) {
+      try {
+        // Clear existing cart
+        await axios.post(
+          `${backendUrl}/api/cart/clear`,
+          {},
+          { headers: { token } }
+        );
+
+        // Add the single item
+        await axios.post(
+          `${backendUrl}/api/cart/update`,
+          {
+            itemId: productId,
+            quantity,
+            variations,
+          },
+          { headers: { token } }
+        );
+      } catch (error) {
+        console.error("Error updating cart:", error);
+        toast.error("Failed to update cart for checkout");
+      }
+    }
+
+    navigate("/place-order");
   };
 
   // Fetch cards data
@@ -230,31 +403,28 @@ const getTotalAmount = () => {
     getCardsData(); // Fetch the cards data
   }, []);
 
-    // Fetch cards data
-    const getIntrosData = async () => {
-      try {
-        const response = await axios.get(`${backendUrl}/api/intro/list`);
-        if (response.data.success) {
-          setIntros(response.data.intros); // Assuming response contains a "cards" array
-        } else {
-          toast.error(response.data.message || "Failed to fetch cards.");
-        }
-      } catch (error) {
-        console.error(error);
-        toast.error("Unable to load intros. Please try again.");
+  // Fetch cards data
+  const getIntrosData = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/api/intro/list`);
+      if (response.data.success) {
+        setIntros(response.data.intros); // Assuming response contains a "cards" array
+      } else {
+        toast.error(response.data.message || "Failed to fetch cards.");
       }
-    };
-  
-    // Fetch products and cards on component mount
-    useEffect(() => {
-      getIntrosData(); // Fetch the cards data
-    }, []);
+    } catch (error) {
+      console.error(error);
+      toast.error("Unable to load intros. Please try again.");
+    }
+  };
 
+  // Fetch products and cards on component mount
+  useEffect(() => {
+    getIntrosData(); // Fetch the cards data
+  }, []);
 
-
-
-   // Fetch memberCards data
-   const getMemberCardsData = async () => {
+  // Fetch memberCards data
+  const getMemberCardsData = async () => {
     try {
       const response = await axios.get(`${backendUrl}/api/memberCard/list`);
       console.log("Fetched Member Cards:", response.data); // Debugging Log
@@ -273,10 +443,9 @@ const getTotalAmount = () => {
 
   useEffect(() => {
     getMemberCardsData(); // Fetch data on mount
-    console.log("Member Cards Data1:", memberCards); // Debugging Log  
+    console.log("Member Cards Data1:", memberCards); // Debugging Log
   }, []);
 
-  
   // Update cart quantity
   const updateQuantity = async (itemId, quantity) => {
     if (quantity < 0) {
@@ -284,7 +453,14 @@ const getTotalAmount = () => {
       return;
     }
 
-    const updatedCart = { ...cartItems, [itemId]: quantity };
+    const updatedCart = {
+      ...cartItems,
+      [itemId]: {
+        ...cartItems[itemId], // Keep existing properties (e.g., variations)
+        quantity: quantity, // Update only the quantity
+      },
+    };
+
     setCartItems(updatedCart);
 
     if (token) {
@@ -297,13 +473,24 @@ const getTotalAmount = () => {
       } catch (error) {
         console.error(error);
         toast.error("Failed to update cart quantity.");
+        // Revert on error
+        setCartItems(cartItems);
       }
     }
   };
 
   // Get cart count
+  // In your ShopContext.js or wherever getCartCount is defined
   const getCartCount = () => {
-    return Object.values(cartItems).reduce((totalCount, quantity) => totalCount + quantity, 0);
+    if (!cartItems || typeof cartItems !== "object") return 0;
+
+    // If cartItems is an array (legacy case), return its length
+    if (Array.isArray(cartItems)) return cartItems.length;
+
+    // For object structure, sum up all quantities
+    return Object.values(cartItems).reduce((total, item) => {
+      return total + (item?.quantity || 0);
+    }, 0);
   };
 
   // // Get wishlist count
@@ -320,97 +507,143 @@ const getTotalAmount = () => {
   useEffect(() => {
     console.log("📦 Updated Total Weight:", weight);
   }, [weight]);
-  
-
 
   useEffect(() => {
     const { totalWeight } = getCartAmount(); // Kunin lang ang weight
     setWeight(totalWeight); // ✅ Set weight after render
+    console.log("🛒 Updated Cart Items:", cartItems);
   }, [cartItems]); // Tumakbo kapag nagbago ang cartItems
-  
 
-// Get cart total amount, including delivery fee and discount
-const getCartAmount = () => {
-  let totalAmount = 0;
-  let totalWeight = 0; // Track total weight  
+  // Get cart total amount, including delivery fee and discount
+  // Updated getCartAmount to include variations
+  const getCartAmount = () => {
+    let totalAmount = 0;
+    let totalWeight = 0;
 
-  Object.entries(cartItems).forEach(([itemId, quantity]) => {
-    if (quantity <= 0) return; // Ignore zero or negative quantities
+    Object.entries(cartItems).forEach(([itemId, itemData]) => {
+      const quantity = itemData.quantity || 0;
+      if (quantity <= 0) return;
 
-    const itemInfo = productDict[itemId];
-    if (!itemInfo) return; // Skip if product data is missing
+      const itemInfo = productDict[itemId];
+      if (!itemInfo) return;
 
-    const basePrice = itemInfo.price || 0;
-    const itemDiscount = itemInfo.discount || 0; // ✅ Get discount percentage
-    const discountedPrice = basePrice - (basePrice * (itemDiscount / 100)); // ✅ Apply discount
-    
-    totalAmount += discountedPrice * quantity;
-    totalWeight += (itemInfo.weight || 0) * quantity; // ✅ Add weight calculation
-  });
+      // Base price
+      let itemPrice = itemInfo.price || 0;
 
-  console.log("🛒 Calculated Total Weight:", totalWeight); // Log immediately
-  setWeight(totalWeight); // ✅ Update state with total weight  
+      // 🧩 Check for variation or variations (in case one uses `variation`, another uses `variations`)
+      let variationLabel = "";
+      let variationAdjustment = 0;
 
-  return totalAmount; // Return only the totalAmount as a number
-};
+      if (itemData.variation && itemData.variation.priceAdjustment) {
+        variationAdjustment = itemData.variation.priceAdjustment;
+        variationLabel = itemData.variation.label || "";
+      } else if (
+        itemData.variations &&
+        typeof itemData.variations === "object"
+      ) {
+        // Support multiple variations (e.g., size + color)
+        Object.values(itemData.variations).forEach((variation) => {
+          if (variation && variation.priceAdjustment) {
+            variationAdjustment += variation.priceAdjustment;
+          }
+        });
+      }
 
-useEffect(() => {
-  const { totalWeight } = getCartAmount();
-  setWeight(totalWeight);
-}, [cartItems, productDict]);
+      itemPrice += variationAdjustment;
 
+      // Discount
+      const itemDiscount = itemInfo.discount || 0;
+      const discountedPrice = itemPrice - itemPrice * (itemDiscount / 100);
 
+      totalAmount += discountedPrice * quantity;
+      totalWeight += (itemInfo.weight || 0) * quantity;
 
-
-
-
-const clearCart = async () => {
-  const savedToken = localStorage.getItem("token");
-  if (!savedToken) {
-    toast.error("You need to be logged in to clear the cart.");
-    return;
-  }
-
-  try {
-    const response = await axios.delete(`${backendUrl}/api/cart/clear`, {
-      headers: { Authorization: `Bearer ${savedToken}` }, // ✅ Ensure Bearer token format
+      console.log(
+        `🧮 Calculating ${itemInfo.name} x${quantity} (${variationLabel}):`
+      );
+      console.log(
+        `   Base: ₱${
+          itemInfo.price
+        }, +Variation: ₱${variationAdjustment}, Discount: ${itemDiscount}%, Subtotal: ₱${
+          discountedPrice * quantity
+        }`
+      );
     });
 
-    if (response.data.success) {
-      setCartItems({});
-      localStorage.removeItem("cartItems");
-      toast.info("Cart has been cleared.");
-    } else {
-      toast.error(response.data.message || "Failed to clear cart.");
+    // Update weight state
+    setWeight(totalWeight);
+    console.log("📦 Total Weight:", totalWeight);
+    console.log("💰 Total Amount:", totalAmount);
+
+    return totalAmount;
+  };
+
+  useEffect(() => {
+    const { totalWeight } = getCartAmount();
+    setWeight(totalWeight);
+  }, [cartItems, productDict]);
+
+  const clearCart = async () => {
+    const savedToken = localStorage.getItem("token");
+    if (!savedToken) {
+      toast.error("You need to be logged in to clear the cart.");
+      return;
     }
-  } catch (error) {
-    console.error("Error clearing cart:", error.response?.data || error.message);
-    toast.error(error.response?.data?.message || "Something went wrong. Please try again.");
-  }
-};
 
+    try {
+      const response = await axios.delete(`${backendUrl}/api/cart/clear`, {
+        headers: { Authorization: `Bearer ${savedToken}` }, // ✅ Ensure Bearer token format
+      });
 
-
-
-
-
+      if (response.data.success) {
+        setCartItems({});
+        localStorage.removeItem("cartItems");
+        toast.info("Cart has been cleared.");
+      } else {
+        toast.error(response.data.message || "Failed to clear cart.");
+      }
+    } catch (error) {
+      console.error(
+        "Error clearing cart:",
+        error.response?.data || error.message
+      );
+      toast.error(
+        error.response?.data?.message ||
+          "Something went wrong. Please try again."
+      );
+    }
+  };
 
   // Fetch products data
+  // ShopContext.jsx
   const getProductsData = async () => {
     try {
       const response = await axios.get(`${backendUrl}/api/product/list`);
-      console.log("📦 Product Fetch Response:", response.data); // Log response
       if (response.data.success) {
         setProducts(response.data.products);
       } else {
         toast.error(response.data.message || "Failed to fetch products.");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching products:", error);
       toast.error("Unable to load products. Please try again.");
     }
   };
 
+  const fetchProduct = async (productId) => {
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/product/${productId}`
+      );
+      if (response.data.success) {
+        return response.data.product;
+      }
+      throw new Error(response.data.message || "Failed to fetch product");
+    } catch (error) {
+      console.error("Error fetching product:", error);
+      return null;
+    }
+  };
   // Fetch user cart data
   const getUserCart = async (userToken) => {
     try {
@@ -456,6 +689,7 @@ const clearCart = async () => {
     setShowSearch,
     cartItems,
     addToCart,
+    buyNow,
     setCartItems,
     getCartCount,
     // getWishlistCount,
@@ -467,13 +701,14 @@ const clearCart = async () => {
     clearCart, // Include the clearCart function here
     cards, // Provide the cards data in context
     setCards,
-    intros, 
+    intros,
     setIntros,
     fetchProduct,
     setMemberCards,
-    getCartAmount,// ✅ Use memoized total
+    getCartAmount, // ✅ Use memoized total
     memberCards, // Provide the cards data in context
-    youtubeUrl, setYoutubeUrl,
+    youtubeUrl,
+    setYoutubeUrl,
     discountCode,
     discountPercent,
     getDiscountAmount,
@@ -484,11 +719,12 @@ const clearCart = async () => {
     applyVoucher,
     voucherAmountDiscount,
     setVoucherAmountDiscount,
-
+    buyNowItem,
+    setBuyNowItem,
+    handleBuyNow,
   };
 
   return (
-
     <ShopContext.Provider value={contextValue}>
       {props.children}
     </ShopContext.Provider>

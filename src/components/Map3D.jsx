@@ -3,8 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import axios from "axios";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-
-const backendUrl =import.meta.env.VITE_BACKEND_URL;
+import { backendUrl } from "../../../admin/src/App";
 
 const MapComponent = () => {
   const [position, setPosition] = useState([13.6252, 123.1863]); // Default Location

@@ -1,34 +1,23 @@
-import React, { useEffect, useState, useLayoutEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Title from '../components/Title';
 import { assets } from '../assets/assets';
 import axios from 'axios';
 import Map3D from '../components/Map3D';
-import Lenis from 'lenis';
-const backendUrl =import.meta.env.VITE_BACKEND_URL;
+import { backendUrl } from '../../../admin/src/App';
+import ChatPopup from '../components/ChatPopup';
+import Newsletter from '../components/NewsletterBox';
+import JobPosting from '../components/JobPostingPopup';
+
 const About = () => {
   const [aboutData, setAboutData] = useState(null);
-  const [aboutImage, setAboutImage] = useState(null); // ✅ Store Image
+  const [aboutImage, setAboutImage] = useState(null);
 
-  // ✅ Fetch Image from Backend
-  useEffect(() => {
-    const fetchAboutImage = async () => {
-      try {
-        const res = await fetch(`${backendUrl}/api/about/image`); // Adjust endpoint if needed
-        const data = await res.json();
-        setAboutImage(`${backendUrl}${data.imageUrl}`);
-      } catch (error) {
-        console.error("Error fetching about image:", error);
-      }
-    };
-    fetchAboutImage();
-  }, []);
-
-  // ✅ Fetch About Data
   useEffect(() => {
     const fetchAboutData = async () => {
       try {
         const response = await axios.get(`${backendUrl}/api/about`);
         setAboutData(response.data);
+        setAboutImage(response.data.image);
       } catch (error) {
         console.error('Error fetching about data:', error);
       }
@@ -36,54 +25,59 @@ const About = () => {
     fetchAboutData();
   }, []);
 
-  if (!aboutData) return <div>Loading...</div>;
+  if (!aboutData) return <div className="flex items-center justify-center min-h-screen text-lg">Loading...</div>;
 
   return (
-    <div className='md:px-[7vw] px-4 my-20'>
-      <div className='pt-8 text-3xl text-center border-t'>
+    <div className="container px-6 mx-auto my-20 md:px-12">
+      {/* Page Title */}
+      <div className="pt-8 text-center border-t">
         <Title text1={'ABOUT'} text2={'US'} />
       </div>
 
-      <div className='flex flex-col gap-16 my-10 md:flex-row'>
-        {/* ✅ Use Fetched Image */}
+      {/* About Section */}
+      <div className="flex flex-col-reverse items-center gap-16 my-10 md:flex-row">
+        <div className="flex-1 space-y-6 text-gray-600">
+          <p>{aboutData.description}</p>
+          <p>{aboutData.additionalDescription}</p>
+          <h3 className="text-xl font-semibold text-gray-800">{aboutData.missionTitle}</h3>
+          <p>{aboutData.mission}</p>
+        </div>
         <img
-          className='w-full md:max-w-[450px]'
-          src={aboutImage || assets.hasharon} 
+          className="object-cover w-full rounded-lg shadow-lg md:max-w-lg"
+          src={aboutImage || assets.hasharon}
           alt="About Image"
           loading="lazy"
         />
-
-        <div className='flex flex-col justify-center gap-6 text-gray-600 md:w-2/4'>
-          <p>{aboutData.description}</p>
-          <p>{aboutData.additionalDescription}</p>
-          <b className='text-gray-800'>{aboutData.missionTitle}</b>
-          <p>{aboutData.mission}</p>
-        </div>
       </div>
 
-      <div className='py-4 text-4xl'>
+      {/* Why Choose Us Section */}
+      <div className="py-4 text-4xl text-center">
         <Title text1={'WHY'} text2={'CHOOSE US'} />
       </div>
-
-      <div className='flex flex-col mb-20 text-sm md:flex-row'>
-        <div className='flex flex-col gap-5 px-10 py-8 border md:px-16 sm:py-20'>
-          <b>{aboutData.qualityAssuranceTitle}</b>
-          <p className='text-gray-700'>{aboutData.qualityAssurance}</p>
-        </div>
-        <div className='flex flex-col gap-5 px-10 py-8 border md:px-16 sm:py-20'>
-          <b>{aboutData.convenienceTitle}</b>
-          <p className='text-gray-700'>{aboutData.convenience}</p>
-        </div>
-        <div className='flex flex-col gap-5 px-10 py-8 border md:px-16 sm:py-20'>
-          <b>{aboutData.customerServiceTitle}</b>
-          <p className='text-gray-700'>{aboutData.customerService}</p>
-        </div>
+      <div className="grid grid-cols-1 gap-8 mb-20 text-sm md:grid-cols-3">
+        {[{
+          title: aboutData.qualityAssuranceTitle,
+          description: aboutData.qualityAssurance
+        }, {
+          title: aboutData.convenienceTitle,
+          description: aboutData.convenience
+        }, {
+          title: aboutData.customerServiceTitle,
+          description: aboutData.customerService
+        }].map((item, index) => (
+          <div key={index} className="p-8 bg-white border rounded-lg shadow-md">
+            <h4 className="mb-3 text-lg font-semibold">{item.title}</h4>
+            <p className="text-gray-700">{item.description}</p>
+          </div>
+        ))}
       </div>
 
-      {/* ✅ Display 3D Map */}
+
+
+      {/* Map Section */}
       <div className="relative z-10 py-10">
         <Title text1={'OUR'} text2={'LOCATION'} />
-        <div className="relative w-full h-[500px] bg-gray-200 rounded-lg overflow-hidden">
+        <div className="relative w-full h-[500px] bg-gray-200 rounded-lg overflow-hidden shadow-md">
           <Map3D />
         </div>
       </div>

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import gsap from "gsap";
 import Lottie from "react-lottie-player";
 import dealAnimation from "../assets/lottie/deals.json"; // Ensure this file exists
+import { backendUrl } from "../../../admin/src/App";
 
-const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const DealsPopup = ({ user }) => { 
   const [showPopup, setShowPopup] = useState(false);
   const [deal, setDeal] = useState(null);

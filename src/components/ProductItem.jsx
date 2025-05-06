@@ -1,23 +1,24 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { Link } from "react-router-dom";
 import { useSpring, animated } from "@react-spring/web";
 
-const ProductItem = ({ id, name, price, discount, image, video, description }) => {
-  const { currency } = useContext(ShopContext);
+const ProductItem = ({ id, name, price, discount, image, video, quantity, description }) => {
+  const { currency, handleBuyNow } = useContext(ShopContext);
   const [productData, setProductData] = useState({
     _id: id,
     name: name,
     price: price,
     discount: discount > 0 ? discount : null,
-    quantity: 10,
+    quantity: quantity,
     image: Array.isArray(image) ? image[0] : image,
-    video: video || "", // Fallback if no video is provided
-    description: description || "", // Ensure description is passed correctly
+    video: video || "",
+    description: description || "",
+    
   });
   const [hovered, setHovered] = useState(false);
+  const videoRef = useRef(null);
 
-  // Scale and shadow effect for hover
   const scaleEffect = useSpring({
     transform: hovered ? "scale(1.05)" : "scale(1)",
     config: { tension: 200, friction: 15 },
@@ -37,11 +38,26 @@ const ProductItem = ({ id, name, price, discount, image, video, description }) =
         price,
         discount: discount > 0 ? discount : null,
         image: Array.isArray(image) ? image[0] : image,
-        video: video || "", // Ensure video URL is set
-        description: description || "", // Ensure description is passed
+        video: video || "",
+        description: description || "",
       }));
     }
   }, [id, name, price, discount, image, video, description]);
+
+  const handleMouseEnter = () => {
+    setHovered(true);
+    if (videoRef.current && productData.video) {
+      videoRef.current.play().catch(e => console.log("Video play error:", e));
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setHovered(false);
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
 
   const finalPrice = productData.discount
     ? price - price * (productData.discount / 100)
@@ -58,16 +74,28 @@ const ProductItem = ({ id, name, price, discount, image, video, description }) =
     return text;
   };
 
+  const onBuyNowClick = () => {
+    handleBuyNow(id, 1);
+  };
+
+  const getMaxLength = () => {
+    if (window.innerWidth < 640) return 30;
+    if (window.innerWidth < 1024) return 50;
+    if (window.innerWidth < 10280) return 25;
+    return 100;
+  };
+
   return (
     <animated.div
-      className="relative flex flex-col h-full transition-shadow duration-300 bg-gray-100 border rounded-lg shadow-md border-gray-150 hover:shadow-xl"
-      style={{ ...scaleEffect, ...shadowEffect }} // Apply zoom and shadow effect
+      className="relative flex flex-col h-full transition-shadow duration-300 border rounded-lg shadow-md bg-[#FDFAF6] border-gray-150 hover:shadow-xl"
+      style={{ ...scaleEffect, ...shadowEffect }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
-      {/* Sale Badge */}
       {productData.discount && (
         <animated.div
-          className="absolute px-3 py-1 text-xs font-bold text-white bg-red-500 rounded-full shadow-md top-2 left-2"
-          style={{ zIndex: 10 }} // Set the z-index higher to ensure it's on top
+          className="absolute px-6 py-1 text-xs font-bold text-white bg-red-500 rounded-full shadow-md top-2 left-2"
+          style={{ zIndex: 10 }}
         >
           Sale
         </animated.div>
@@ -82,41 +110,38 @@ const ProductItem = ({ id, name, price, discount, image, video, description }) =
           className="m-5 overflow-hidden bg-white border rounded-t-lg border-gray-50"
           style={useSpring({ opacity: 1, y: 0, from: { opacity: 0, y: 20 } })}
         >
-          <animated.div
-            className="relative"
-            onMouseEnter={() => setHovered(true)} // Only apply hover effect on the image
-            onMouseLeave={() => setHovered(false)} // Remove hover effect when mouse leaves
-          >
-            <div className="relative">
-  {/* Show video on hover */}
-  {hovered && productData.video ? (
-    <video
-      className="absolute top-0 left-0 object-cover w-full transition-opacity duration-500 ease-in-out opacity-100 md:h-60 sm:h-60"
-      autoPlay
-      loop
-      muted
-    >
-      <source src={productData.video} type="video/mp4" />
-      Your browser does not support the video tag.
-    </video>
-  ) : null}
-
-  <img
-    className={`border lg:p-[30px] md:py-[40px] w-full md:h-60 sm:h-60 object-cover transition-opacity duration-500 ease-in-out ${hovered && productData.video ? 'opacity-0' : 'opacity-100'}`}
-    src={productData.image}
-    alt={name}
-  />
-</div>
-
-          </animated.div>
+          <div className="relative aspect-square">
+            {productData.video && (
+              <video
+                ref={videoRef}
+                className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-500 ${
+                  hovered ? 'opacity-100 z-10' : 'opacity-0'
+                }`}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+              >
+                <source src={productData.video} type="video/mp4" />
+              </video>
+            )}
+            
+            <img
+              className={`w-full h-full object-cover transition-opacity duration-500 ${
+                hovered && productData.video ? 'opacity-0' : 'opacity-100'
+              }`}
+              src={productData.image}
+              alt={name}
+              loading="lazy"
+            />
+          </div>
         </animated.div>
       </Link>
 
       <div className="flex-grow">
         <p className="m-5 text-lg font-bold text-gray-700 truncate">{name}</p>
-        {/* Displaying the description */}
         <p className="m-5 text-lg text-gray-600">
-          {truncateDescription(productData.description, 50)} {/* Adjust maxLength as needed */}
+          {truncateDescription(productData.description, getMaxLength())}
         </p>
       </div>
 
@@ -142,26 +167,31 @@ const ProductItem = ({ id, name, price, discount, image, video, description }) =
         </div>
       </div>
 
-      {/* Button to view details */}
-      <Link
-  to={`/product/${id}`}
-  className="relative block w-full py-5 mt-4 overflow-hidden text-center text-white transition-all duration-300 bg-green-600 rounded-b-lg group hover:bg-green-700"
->
-  {/* Text slides right & fades out */}
-  <span className="absolute transition-all duration-300 ease-in-out -translate-x-1/2 -translate-y-1/2 opacity-100 left-1/2 top-1/2 group-hover:translate-x-full group-hover:opacity-0">
-    View Details
-  </span>
+      <div className="flex flex-col gap-2 p-4">
+        <Link
+          to={`/product/${id}`}
+          className="relative block w-full py-3 overflow-hidden text-center text-white transition-all duration-300 bg-gray-600 rounded-lg group hover:bg-black"
+        >
+          <span className="absolute transition-all duration-300 ease-in-out -translate-x-1/2 -translate-y-1/2 opacity-100 left-1/2 top-1/2 group-hover:translate-x-full group-hover:opacity-0">
+            View Details
+          </span>
+          <span className="absolute left-0 transition-all duration-300 ease-in-out -translate-x-full -translate-y-1/2 opacity-0 top-1/2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:left-1/2">
+            ➜
+          </span>
+        </Link>
 
-  {/* Arrow fades in from left to center */}
-  <span className="absolute left-0 transition-all duration-300 ease-in-out -translate-x-full -translate-y-1/2 opacity-0 top-1/2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:left-1/2">
-    ➜
-  </span>
-</Link>
-
-
-
-
-
+        {/* <button
+          onClick={productData.quantity > 0 ? onBuyNowClick : null}
+          className={`w-full py-3 text-center text-black transition-all duration-300 rounded-lg ${
+            productData.quantity > 0
+              ? "bg-none border border-black hover:bg-black hover:text-white transition-all duration-300"
+              : "bg-gray-400 cursor-not-allowed"
+          }`}
+          disabled={productData.quantity === 0}
+        >
+          {productData.quantity > 0 ? "Buy Now" : "Out of Stock"}
+        </button> */}
+      </div>
     </animated.div>
   );
 };

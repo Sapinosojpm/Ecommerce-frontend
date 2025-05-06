@@ -75,7 +75,7 @@ const FacebookLoginButton = () => {
   return (
     <button
       onClick={handleFBLogin}
-      className="w-full text-sm flex mb-5 items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition-all duration-200"
+      className="flex items-center justify-center w-full gap-2 px-4 py-2 mb-5 text-sm font-semibold text-white transition-all duration-200 bg-blue-600 rounded-md hover:bg-blue-700"
     >
       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
         <path d="M22.675 0h-21.35C.61 0 0 .61 0 1.36v21.279c0 .749.61 1.361 1.325 1.361H12.82V14.93H9.692v-3.64h3.128V8.412c0-3.1 1.893-4.788 4.659-4.788 1.324 0 2.462.097 2.796.143v3.24l-1.92.001c-1.505 0-1.796.716-1.796 1.764v2.31h3.588l-.467 3.64h-3.121V24h6.126c.725 0 1.325-.612 1.325-1.361V1.36C24 .611 23.4 0 22.675 0z" />

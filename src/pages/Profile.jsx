@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
+import { backendUrl } from "../../../admin/src/App";
 import addressData from "../data/Philippines.json"; // Adjust the path
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Lenis from "lenis";
-
-const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const Profile = () => {
   const [userDetails, setUserDetails] = useState({
     firstName: "",

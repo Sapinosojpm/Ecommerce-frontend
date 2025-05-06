@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { backendUrl } from "../../../admin/src/App";
 
-const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const NewsletterBox = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,8 +54,8 @@ const NewsletterBox = () => {
   };
 
   return (
-    <div className="p-6 text-white rounded-lg bg-darkGreen">
-      <p className="mb-4 text-2xl font-medium">
+    <div className="mx-2 my-4 text-white rounded-lg bg-darkGreen">
+      <p className="mb-4 text-2xl font-medium text-black">
         Subscribe now & get {discount ? `${discount}%` : "a"} off
       </p>
 

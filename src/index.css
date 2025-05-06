@@ -19,9 +19,9 @@ a.active hr{
   font-style: normal;
 }
 
-::-webkit-scrollbar{
+/* ::-webkit-scrollbar{
     display:none
-}
+} */
 
 
 @media(max-width: 640px){
@@ -30,3 +30,18 @@ a.active hr{
         color: white;
     }
 }
+
+/* For Webkit Browsers (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+    width: 18px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: #555;
+    border-radius: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: #222;
+  }
+  

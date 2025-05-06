@@ -20,7 +20,7 @@ const AnimatedButton = ({ text, onClick, successText, duration = 2000, icon }) =
   return (
     <button
       className={`button-container relative rounded-lg px-6 py-3 text-white transition-all duration-300 ${
-        success ? "bg-green-600" : loading ? "bg-gray-600" : "bg-green-700 hover:bg-green-800"
+        success ? "bg-black" : loading ? "bg-gray-600" : "bg-black hover:bg-gray-800"
       }`}
       onClick={handleClick}
       disabled={loading || success}

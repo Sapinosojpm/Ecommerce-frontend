@@ -44,6 +44,7 @@ const RelatedProducts = ({ category, excludeId }) => {
                 id={item._id}
                 name={item.name}
                 price={item.price}
+                quantity={item.quantity}
                 image={item.image}
                 discount={item.discount}
                 description={item.description}

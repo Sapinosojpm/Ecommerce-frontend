@@ -1,8 +1,8 @@
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { backendUrl } from "../../../admin/src/App";
 
-const backendUrl =import.meta.env.VITE_BACKEND_URL;
 export default function SignUp() {
     const navigate = useNavigate();
 
@@ -28,7 +28,7 @@ export default function SignUp() {
     return (
         <GoogleOAuthProvider clientId="676896020946-npg2vukngeemscbtlnvid58o77b44mrg.apps.googleusercontent.com">
             <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
-                <h1 className="mb-6 text-3xl font-bold">Sign Up</h1>
+                <h1 className="text-3xl font-bold mb-6">Sign Up</h1>
                 <GoogleLogin
                     onSuccess={handleSuccess}
                     onError={() => console.error("Sign-Up Failed")}

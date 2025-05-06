@@ -1,0 +1,63 @@
+.notification-badge {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: red;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    z-index: 1000;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  
+  .order-card {
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .order-card.pending {
+    border-left: 4px solid #FFA500;
+  }
+  
+  .order-card.processing {
+    border-left: 4px solid #1E90FF;
+  }
+  
+  .order-card.completed {
+    border-left: 4px solid #32CD32;
+  }
+  
+  .order-card.cancelled {
+    border-left: 4px solid #FF0000;
+  }
+  
+  .order-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    z-index: 1000;
+    animation: slideIn 0.5s forwards;
+  }
+  
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }

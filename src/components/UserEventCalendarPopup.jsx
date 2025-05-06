@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { backendUrl } from '../../../admin/src/App'; // Adjust the import as needed
 
-const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const UserEventCalendarPopup = ({ isOpen, onClose }) => {
   const [events, setEvents] = useState([]);
 
@@ -39,11 +39,11 @@ const UserEventCalendarPopup = ({ isOpen, onClose }) => {
           {/* Modal content */}
           <div className="relative z-50 w-11/12 max-w-4xl mx-auto overflow-hidden bg-white shadow-2xl rounded-2xl">
             {/* Header with green background */}
-            <div className="flex items-center justify-between px-6 py-4 bg-green-700">
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-700">
               <h2 className="text-2xl font-bold text-white">Upcoming Events!</h2>
               <button
                 onClick={onClose}
-                className="text-3xl font-bold text-white transition-colors hover:text-green-200"
+                className="text-3xl font-bold text-white transition-colors hover:text-gray-200"
               >
                 &times;
               </button>
@@ -55,9 +55,9 @@ const UserEventCalendarPopup = ({ isOpen, onClose }) => {
                   events.map((event) => (
                     <div
                       key={event._id}
-                      className="p-6 transition-shadow duration-300 border border-green-200 rounded-lg shadow-sm bg-green-50 hover:shadow-md"
+                      className="p-6 transition-shadow duration-300 border border-gray-200 rounded-lg shadow-sm bg-gray-50 hover:shadow-md"
                     >
-                      <h3 className="mb-4 text-xl font-semibold text-green-800">
+                      <h3 className="mb-4 text-xl font-semibold text-black">
                         {event.title}
                       </h3>
 

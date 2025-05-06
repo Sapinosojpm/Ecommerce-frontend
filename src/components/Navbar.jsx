@@ -4,16 +4,25 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion"; // ✅ Import Framer Motion
 import { ShopContext } from "../context/ShopContext";
 import { WishlistContext } from "../context/WishlistContext";
+import { backendUrl } from "../../../admin/src/App";
 
-
-const backendUrl =import.meta.env.VITE_BACKEND_URL;
 const Navbar = () => {
   const [visible, setVisible] = useState(false);
-  const [userRole, setUserRole] = useState(localStorage.getItem("role") || null);
+  const [userRole, setUserRole] = useState(
+    localStorage.getItem("role") || null
+  );
   const [logo, setLogo] = useState(null);
-  const { setShowSearch, getCartCount, navigate, token, setToken, setCartItems } = useContext(ShopContext);
+  const {
+    setShowSearch,
+    getCartCount,
+    navigate,
+    token,
+    setToken,
+    setCartItems,
+  } = useContext(ShopContext);
   const { wishlist } = useContext(WishlistContext);
   const location = useLocation();
+  const [navbarLinks, setNavbarLinks] = useState([]);
 
   // ✅ Logout Function
   const logout = () => {
@@ -24,6 +33,19 @@ const Navbar = () => {
     setUserRole(null);
     navigate("/login");
   };
+
+  useEffect(() => {
+    const fetchLinks = async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/navbar-links`);
+        const data = await res.json();
+        setNavbarLinks(data.filter((link) => link.enabled)); // Show only enabled links
+      } catch (error) {
+        console.error("Error fetching navbar links:", error);
+      }
+    };
+    fetchLinks();
+  }, []);
 
   // ✅ Fetch Logo from Backend
   useEffect(() => {
@@ -47,7 +69,7 @@ const Navbar = () => {
         logout(); // Only logout if token is missing
         return;
       }
-  
+
       try {
         const payload = JSON.parse(atob(token.split(".")[1]));
         const isExpired = payload.exp * 1000 < Date.now();
@@ -58,15 +80,14 @@ const Navbar = () => {
         logout();
       }
     };
-  
+
     // Run check on page load
     checkTokenExpiration();
-  
+
     // Run periodically every 60 seconds
     const interval = setInterval(checkTokenExpiration, 60000);
     return () => clearInterval(interval);
   }, []);
-  
 
   // ✅ Update userRole when token changes
   useEffect(() => {
@@ -76,7 +97,7 @@ const Navbar = () => {
   const getWishlistCount = () => (wishlist ? wishlist.length : 0);
 
   return (
-    <div className="px-4 flex items-center z-50 justify-between py-3 font-medium md:px-[7vw] top-0 bg-white w-full z-50 shadow-md fixed left-0 right-0">
+    <div className="px-4 flex items-center z-50 justify-between py-3 font-medium md:px-[7vw] top-0 bg-black w-full z-50 shadow-md fixed left-0 right-0">
       {/* Logo */}
       <Link to="/">
         {logo ? (
@@ -94,37 +115,20 @@ const Navbar = () => {
       </Link>
 
       {/* Navigation Links */}
-      <ul className="hidden gap-5 text-sm text-gray-700 sm:flex">
-        <motion.li whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <NavLink to="/" className="hover:scale-105">
-            <p>Home</p>
-            <hr className="w-full border-none h-[1.5px] bg-gray-700 hidden" />
-          </NavLink>
-        </motion.li>
-        <motion.li whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <NavLink to="/collection" className="hover:scale-105">
-          <p>Products</p>
-          <hr className="w-full border-none h-[1.5px] bg-gray-700 hidden" />
-          </NavLink>
-        </motion.li>
-        <motion.li whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <NavLink to="/about" className="hover:scale-105">
-          <p>About</p>
-          <hr className="w-full border-none h-[1.5px] bg-gray-700 hidden" />
-          </NavLink>
-        </motion.li>
-        <motion.li whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <NavLink to="/contact" className="hover:scale-105">
-          <p>Contact</p>
-          <hr className="w-full border-none h-[1.5px] bg-gray-700 hidden" />
-          </NavLink>
-        </motion.li>
-        <motion.li whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <NavLink to="/portfolio" className="hover:scale-105">
-          <p>Portfolio</p>
-          <hr className="w-full border-none h-[1.5px] bg-gray-700 hidden" />
-          </NavLink>
-        </motion.li>
+      <ul className="hidden gap-5 text-sm text-white sm:flex">
+        {navbarLinks.map((link) => (
+          <motion.li
+            key={link._id}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <NavLink to={link.path} className="hover:scale-105">
+              <p>{link.name}</p>
+              <hr className="w-full border-none h-[1.5px] bg-gray-700 hidden" />
+            </NavLink>
+          </motion.li>
+        ))}
+
         {userRole === "admin" && (
           <motion.li whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <a
@@ -156,24 +160,23 @@ const Navbar = () => {
         {/* Search Icon (Only on Collection Page) */}
         {location.pathname === "/collection" && (
           <motion.img
-          onClick={() => {
-            setShowSearch(true);
-            window.scrollTo({ top: 0, behavior: "smooth" }); // Scroll to top
-          }}
-          src={assets.search_icon}
-          className="w-5 cursor-pointer"
-          alt="Search"
-          whileHover={{ scale: 1.1 }}
-          transition={{ duration: 0.2 }}
-        />
-        
+            onClick={() => {
+              setShowSearch(true);
+              window.scrollTo({ top: 0, behavior: "smooth" }); // Scroll to top
+            }}
+            src={assets.search_icon}
+            className="w-5 cursor-pointer invert"
+            alt="Search"
+            whileHover={{ scale: 1.1 }}
+            transition={{ duration: 0.2 }}
+          />
         )}
 
         {/* Profile Icon */}
         <div className="relative group">
           <motion.img
             onClick={() => (token ? null : navigate("/login"))}
-            className="w-5 cursor-pointer hover:scale-105"
+            className="w-5 cursor-pointer hover:scale-105 invert"
             src={assets.profile_icon}
             alt="Profile"
             whileHover={{ scale: 1.1 }}
@@ -214,7 +217,11 @@ const Navbar = () => {
           <>
             <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
               <Link to="/cart" className="relative">
-                <img src={assets.cart_icon} className="w-5 hover:scale-105" alt="Cart" />
+                <img
+                  src={assets.cart_icon}
+                  className="w-5 hover:scale-105 invert"
+                  alt="Cart"
+                />
                 <p className="absolute right-[-5px] bottom-[-5px] w-4 text-center bg-black text-white rounded-full text-[8px]">
                   {getCartCount()}
                 </p>
@@ -225,7 +232,7 @@ const Navbar = () => {
               <Link to="/wishlist" className="relative">
                 <img
                   src={assets.wishlist_icon}
-                  className="w-5 cursor-pointer hover:scale-105"
+                  className="w-5 cursor-pointer hover:scale-105 invert"
                   alt="Wishlist"
                 />
                 <p className="absolute right-[-5px] bottom-[-5px] w-4 text-center bg-black text-white rounded-full text-[8px]">

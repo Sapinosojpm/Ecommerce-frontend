@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import Lottie from "lottie-react";
 import AIPopup from "./AIPopup";
 import ChatPopup from "./ChatPopup";
+import LiveChatPopup from "./LiveChat";  // Import LiveChatPopup
 import UserEventCalendarPopup from "./UserEventCalendarPopup";
 import JobPostingPopup from "./JobPostingPopup";
 import FAQPage from "./FAQPage";
@@ -52,6 +53,7 @@ const PopupManager = () => {
           >
             {activePopup === "ai" && <AIPopup isOpen onClose={() => setActivePopup(null)} />}
             {activePopup === "chat" && <ChatPopup isOpen onClose={() => setActivePopup(null)} />}
+            {activePopup === "liveChat" && <LiveChatPopup isOpen onClose={() => setActivePopup(null)} />} {/* Add LiveChatPopup here */}
             {activePopup === "event" && <UserEventCalendarPopup isOpen onClose={() => setActivePopup(null)} />}
             {activePopup === "job" && <JobPostingPopup open={true} onClose={() => setActivePopup(null)} />}
             {activePopup === "faq" && <FAQPage isOpen onClose={() => setActivePopup(null)} />}
@@ -70,11 +72,12 @@ const PopupManager = () => {
             exit={{ opacity: 0, scale: 0.8, y: 10 }}
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
           >
-            {[
+            {[ 
               { key: "ai", img: assets.bot, label: "AI Chat" },
               { key: "chat", img: assets.message, label: "Message" },
+              { key: "liveChat", img: assets.chatLive, label: "Live Chat" },
               { key: "event", img: assets.calendar, label: "Events" },
-              { key: "job", img: assets.jobseeker, label: "Job Postings" },
+              { key: "job", img: assets.jobseeker, label: "Job List" },
               { key: "faq", img: assets.question, label: "FAQ" },
               { key: "vouchers", img: assets.voucher, label: "Vouchers" },
             ].map(({ key, img, label }) => (
@@ -91,8 +94,8 @@ const PopupManager = () => {
                     !isLoggedIn
                       ? "bg-gray-400 cursor-not-allowed"
                       : activePopup === key
-                      ? "bg-green-700 text-white"
-                      : "bg-black text-white hover:bg-green-700"
+                      ? "bg-gray-700 text-white"
+                      : "bg-black text-white hover:bg-gray-700"
                   }`}
                   onClick={() => togglePopup(key)}
                   disabled={!isLoggedIn}
