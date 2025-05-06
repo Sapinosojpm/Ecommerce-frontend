@@ -8,11 +8,11 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/uploads": {
-        target: "http://localhost:4000", // Your backend server
+        target: "https://ecommerce-server-d8a1.onrender.com", // Your backend server
         changeOrigin: true,
       },
       "/api": {
-        target: "http://localhost:4000", // Ensure API calls also pass correctly
+        target: "https://ecommerce-server-d8a1.onrender.com", // Ensure API calls also pass correctly
         changeOrigin: true,
       },
     },

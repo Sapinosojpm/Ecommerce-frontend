@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:4000/api", // Replace with your backend URL
+  baseURL: "https://ecommerce-server-d8a1.onrender.com/api", // Replace with your backend URL
 });
 
 // Intercept API responses to handle 401/403 errors

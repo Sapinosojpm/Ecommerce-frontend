@@ -13,7 +13,7 @@ const LiveStreamPopup = () => {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const response = await fetch("http://localhost:4000/api/profile", {
+        const response = await fetch("https://ecommerce-server-d8a1.onrender.com/api/profile", {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -35,7 +35,7 @@ const LiveStreamPopup = () => {
     const checkLiveStatus = async () => {
       try {
         const response = await fetch(
-          "http://localhost:4000/api/livestream/status"
+          "https://ecommerce-server-d8a1.onrender.com/api/livestream/status"
         );
         if (response.ok) {
           const data = await response.json();

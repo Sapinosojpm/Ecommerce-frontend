@@ -1,7 +1,7 @@
 // passwordResetService.js
 import axios from 'axios';
 
-const API_URL = 'http://localhost:4000/api/user/reset-password/confirm';
+const API_URL = 'https://ecommerce-server-d8a1.onrender.com/api/user/reset-password/confirm';
 
 export const resetPassword = async (token, newPassword) => {
   try {
