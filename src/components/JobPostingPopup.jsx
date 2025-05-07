@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { backendUrl } from "const backendUrl = import.meta.env.VITE_BACKEND_URL;";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const JobPosting = ({ open, onClose, embedded = false }) => {
   const [jobs, setJobs] = useState([]);
