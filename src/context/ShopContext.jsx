@@ -62,7 +62,7 @@ const ShopContextProvider = (props) => {
       };
 
       // Clear any existing cart items
-      setCartItems({});
+      // setCartItems({});
 
       // Set the buy now item
       setBuyNowItem(itemWithVariations);
