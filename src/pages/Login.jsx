@@ -919,7 +919,7 @@ const Login = () => {
             {(currentState === "Login" || currentState === "Sign Up") &&
               !isPhoneLogin && (
                 <ReCAPTCHA
-                  sitekey="6LdU9DArAAAAAPK-v0CO2-fzqnmMKzrl07rS7qfN"
+                  sitekey="6Ldf-zArAAAAACFe76Bby2Lrn8BBdxMTSpXfo9_n"
                   onChange={(value) => setCaptchaValue(value)}
                   className="my-4"
                 />
