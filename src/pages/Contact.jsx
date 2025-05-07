@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useLayoutEffect } from 'react';
 import Title from '../components/Title';
 import axios from 'axios';
-import { backendUrl } from 'const backendUrl = import.meta.env.VITE_BACKEND_URL;';
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 import { Link } from 'react-router-dom';
 import Lenis from 'lenis';
 import ChatPopup from '../components/ChatPopup';

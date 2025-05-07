@@ -3,7 +3,7 @@ import Title from '../components/Title';
 import { assets } from '../assets/assets';
 import axios from 'axios';
 import Map3D from '../components/Map3D';
-import { backendUrl } from 'const backendUrl = import.meta.env.VITE_BACKEND_URL;';
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 import ChatPopup from '../components/ChatPopup';
 import Newsletter from '../components/NewsletterBox';
 import JobPosting from '../components/JobPostingPopup';

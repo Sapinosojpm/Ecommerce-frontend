@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import '../css/hero.css';  // Adjust the path if necessary
-import { backendUrl } from 'const backendUrl = import.meta.env.VITE_BACKEND_URL;';
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const Hero = () => {
   const [heroData, setHeroData] = useState(null);
