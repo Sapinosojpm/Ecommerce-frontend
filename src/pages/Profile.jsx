@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
-import { backendUrl } from "../../../admin/src/App";
+import { backendUrl } from "const backendUrl = import.meta.env.VITE_BACKEND_URL;";
 import addressData from "../data/Philippines.json"; // Adjust the path
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";

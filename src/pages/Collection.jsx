@@ -4,7 +4,7 @@ import { ShopContext } from '../context/ShopContext';
 import { assets } from '../assets/assets';
 import Title from '../components/Title';
 import ProductItem from '../components/ProductItem';
-import { backendUrl } from '../../../admin/src/App';
+import { backendUrl } from 'const backendUrl = import.meta.env.VITE_BACKEND_URL;';
 import Lenis from 'lenis';
 import AdsDisplay from '../components/AdsDisplay';
 

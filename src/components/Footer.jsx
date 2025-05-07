@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { assets } from "../../../admin/src/assets/assets";
-import { backendUrl } from "../../../admin/src/App";
+import { backendUrl } from "const backendUrl = import.meta.env.VITE_BACKEND_URL;";
 import { Link } from "react-router-dom";
 import '../css/Footer.css'; // Import custom CSS
 

@@ -1,6 +1,6 @@
 // src/context/youtubeContext.jsx
 import React, { createContext, useState, useEffect } from 'react';
-import { backendUrl } from '../../../admin/src/App';
+import { backendUrl } from 'const backendUrl = import.meta.env.VITE_BACKEND_URL;';
 
 // Create and export the context as a named export
 export const youtubeContext = createContext();

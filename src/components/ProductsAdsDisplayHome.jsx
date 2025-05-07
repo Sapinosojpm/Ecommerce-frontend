@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { backendUrl } from "../../../admin/src/App";
+import { backendUrl } from "const backendUrl = import.meta.env.VITE_BACKEND_URL;";
 
 const AdsDisplay = () => {
   const [ads, setAds] = useState([]);

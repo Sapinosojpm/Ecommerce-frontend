@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { backendUrl } from '../../../admin/src/App'; // Adjust the import as needed
+import { backendUrl } from 'const backendUrl = import.meta.env.VITE_BACKEND_URL;'; // Adjust the import as needed
 
 const UserEventCalendarPopup = ({ isOpen, onClose }) => {
   const [events, setEvents] = useState([]);

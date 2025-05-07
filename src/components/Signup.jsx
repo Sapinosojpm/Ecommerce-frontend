@@ -1,7 +1,7 @@
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { backendUrl } from "../../../admin/src/App";
+import { backendUrl } from "const backendUrl = import.meta.env.VITE_BACKEND_URL;";
 
 export default function SignUp() {
     const navigate = useNavigate();
