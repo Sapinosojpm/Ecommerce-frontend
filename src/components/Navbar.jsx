@@ -4,8 +4,9 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { motion } from "framer-motion"; // ✅ Import Framer Motion
 import { ShopContext } from "../context/ShopContext";
 import { WishlistContext } from "../context/WishlistContext";
-import { backendUrl } from "../../../admin/src/App";
 
+
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 const Navbar = () => {
   const [visible, setVisible] = useState(false);
   const [userRole, setUserRole] = useState(
