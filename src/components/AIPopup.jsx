@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { backendUrl } from "const backendUrl = import.meta.env.VITE_BACKEND_URL;";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 import { Send, X, Trash2 } from "lucide-react";
 
 const AIPopup = ({ isOpen, onClose }) => {

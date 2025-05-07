@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { backendUrl } from "const backendUrl = import.meta.env.VITE_BACKEND_URL;";
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const NewsletterBox = () => {
   const [email, setEmail] = useState("");
