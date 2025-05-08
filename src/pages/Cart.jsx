@@ -56,7 +56,6 @@ const Cart = () => {
       setCartData(tempData);
     }
   }, [cartItems, products]);
-  
 
   const isCartEmpty = cartData.length === 0;
 
@@ -65,15 +64,26 @@ const Cart = () => {
     return productData && productData.quantity === 0;
   });
 
+  // Update total price calculation to include variations
   const getTotalPrice = () => {
     return cartData.reduce((total, item) => {
       const productData = products.find((product) => product._id === item._id);
       if (!productData) return total;
 
-      const finalPrice = productData.discount
+      let basePrice = productData.discount
         ? productData.price * (1 - productData.discount / 100)
         : productData.price;
-      return total + finalPrice * item.quantity;
+
+      // Add variation price adjustments
+      let variationAdjustment = 0;
+      if (item.variations) {
+        for (const variation of Object.values(item.variations)) {
+          variationAdjustment += variation.priceAdjustment || 0;
+        }
+      }
+
+      const finalItemPrice = basePrice + variationAdjustment;
+      return total + finalItemPrice * item.quantity;
     }, 0);
   };
 
@@ -118,8 +128,6 @@ const Cart = () => {
     updateQuantity(itemId, newQuantity);
   };
 
-  
-
   return (
     <div className="border-t pt-[80px] md:pt-[7%] sm:pt-[10%] md:px-[7vw] px-4">
       <div className="text-2xl mb-3 pt-[40px]">
@@ -155,9 +163,18 @@ const Cart = () => {
 
             if (!productData) return null;
 
-            const finalPrice = productData.discount
+            let basePrice = productData.discount
               ? productData.price * (1 - productData.discount / 100)
               : productData.price;
+
+            let variationAdjustment = 0;
+            if (item.variations) {
+              for (const variation of Object.values(item.variations)) {
+                variationAdjustment += variation.priceAdjustment || 0;
+              }
+            }
+
+            const finalPrice = basePrice + variationAdjustment;
 
             return (
               <div
