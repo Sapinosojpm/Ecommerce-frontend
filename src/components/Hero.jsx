@@ -32,16 +32,16 @@ const Hero = () => {
   return (
     
     <div
-      id="section1"
-      className="flex flex-col sm:flex-row"
-      style={{
-        backgroundImage: `url(${heroData.image})`, 
-        backgroundSize: 'cover', 
-        backgroundPosition: 'center',
-        minHeight: '400px', // Minimum height to ensure content is centered
-      }}
-    >
-
+    id="section1"
+    className="flex flex-col sm:flex-row"
+    style={{
+      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${heroData.image})`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      minHeight: '400px',
+    }}
+  >
+  
       
       <div 
         id="section1-content" 

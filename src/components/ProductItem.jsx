@@ -87,19 +87,19 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
 
   return (
     <animated.div
-      className="relative flex flex-col h-full transition-shadow duration-300 border rounded-lg shadow-md bg-[#FDFAF6] border-gray-150 hover:shadow-xl"
+      className="relative flex flex-col h-full transition-shadow duration-300 border rounded-lg shadow-md bg-[FDFAF6#] border-gray-150 hover:shadow-xl"
       style={{ ...scaleEffect, ...shadowEffect }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {productData.discount && (
-        <animated.div
-          className="absolute px-6 py-1 text-xs font-bold text-white bg-red-500 rounded-full shadow-md top-2 left-2"
-          style={{ zIndex: 10 }}
-        >
+     {productData.discount && (
+      <div className="absolute top-0 z-10 w-24 h-24 overflow-hidden left-1">
+        <div className="absolute w-48 p-1 text-xs font-bold text-center text-white uppercase transform -rotate-45 bg-red-500 shadow-md -left-20 top-4">
           Sale
-        </animated.div>
-      )}
+        </div>
+      </div>
+    )}
+
 
       <Link
         className="block text-gray-800 cursor-pointer"
@@ -170,7 +170,7 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
       <div className="flex flex-col gap-2 p-4">
         <Link
           to={`/product/${id}`}
-          className="relative block w-full py-3 overflow-hidden text-center text-white transition-all duration-300 bg-gray-600 rounded-lg group hover:bg-black"
+          className="relative block w-full py-3 overflow-hidden text-center text-white transition-all duration-300 bg-[#088395] rounded- group hover:bg-black"
         >
           <span className="absolute transition-all duration-300 ease-in-out -translate-x-1/2 -translate-y-1/2 opacity-100 left-1/2 top-1/2 group-hover:translate-x-full group-hover:opacity-0">
             View Details
@@ -180,17 +180,7 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
           </span>
         </Link>
 
-        {/* <button
-          onClick={productData.quantity > 0 ? onBuyNowClick : null}
-          className={`w-full py-3 text-center text-black transition-all duration-300 rounded-lg ${
-            productData.quantity > 0
-              ? "bg-none border border-black hover:bg-black hover:text-white transition-all duration-300"
-              : "bg-gray-400 cursor-not-allowed"
-          }`}
-          disabled={productData.quantity === 0}
-        >
-          {productData.quantity > 0 ? "Buy Now" : "Out of Stock"}
-        </button> */}
+  
       </div>
     </animated.div>
   );

@@ -48,7 +48,7 @@ const SaleProductsList = () => {
           {saleProducts.map((product) => (
             <SwiperSlide key={product._id} className="h-auto">
               <Link to={`/product/${product._id}`} className="block h-full">
-                <div className="relative flex flex-col h-full p-4 transition-all duration-300 bg-[#FDFAF6] rounded-lg shadow-lg hover:shadow-xl hover:scale-[1.02]">
+                <div className="relative flex flex-col h-full p-4 transition-all duration-300 bg-gray-50 border rounded-lg shadow-lg hover:shadow-xl hover:scale-[1.02]">
                   <div className="absolute px-3 py-1 text-xs font-bold text-white bg-red-500 rounded-full shadow-md top-3 left-3 sm:text-sm">
                     -{product.discount}%
                   </div>
