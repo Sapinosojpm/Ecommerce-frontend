@@ -40,6 +40,7 @@ const Cart = () => {
   }, []);
 
   useEffect(() => {
+    console.log("cartItems:", cartItems); // Debug
     if (products.length > 0) {
       const tempData = [];
       for (const itemId in cartItems) {
@@ -48,13 +49,14 @@ const Cart = () => {
           tempData.push({
             _id: itemId,
             quantity: item.quantity,
-            variations: item.variations || null, // Include variations here
+            variations: item.variations || null,
           });
         }
       }
       setCartData(tempData);
     }
   }, [cartItems, products]);
+  
 
   const isCartEmpty = cartData.length === 0;
 
