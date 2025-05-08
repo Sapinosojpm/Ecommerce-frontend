@@ -21,6 +21,7 @@ const Cart = () => {
   } = useContext(ShopContext);
 
   const [cartData, setCartData] = useState([]);
+  const [quantityErrors, setQuantityErrors] = useState({});
 
   useLayoutEffect(() => {
     const lenis = new Lenis({

@@ -286,7 +286,8 @@ const ShopContextProvider = (props) => {
         
         selectedVariations[variationName] = {
           name: option.name,
-          priceAdjustment: option.priceAdjustment || 0
+          priceAdjustment: option.priceAdjustment || 0,
+          quantity: option.quantity || 0,
         };
       }
     }
