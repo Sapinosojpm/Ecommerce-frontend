@@ -53,7 +53,6 @@ const PopupManager = () => {
           >
             {activePopup === "ai" && <AIPopup isOpen onClose={() => setActivePopup(null)} />}
             {activePopup === "chat" && <ChatPopup isOpen onClose={() => setActivePopup(null)} />}
-            {activePopup === "liveChat" && <LiveChatPopup isOpen onClose={() => setActivePopup(null)} />} {/* Add LiveChatPopup here */}
             {activePopup === "event" && <UserEventCalendarPopup isOpen onClose={() => setActivePopup(null)} />}
             {activePopup === "job" && <JobPostingPopup open={true} onClose={() => setActivePopup(null)} />}
             {activePopup === "faq" && <FAQPage isOpen onClose={() => setActivePopup(null)} />}
@@ -75,7 +74,6 @@ const PopupManager = () => {
             {[ 
               { key: "ai", img: assets.bot, label: "AI Chat" },
               { key: "chat", img: assets.message, label: "Message" },
-              { key: "liveChat", img: assets.chatLive, label: "Live Chat" },
               { key: "event", img: assets.calendar, label: "Events" },
               { key: "job", img: assets.jobseeker, label: "Job List" },
               { key: "faq", img: assets.question, label: "FAQ" },
