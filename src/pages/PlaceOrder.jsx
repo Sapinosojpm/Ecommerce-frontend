@@ -383,7 +383,12 @@ const computedTotal = useMemo(() => {
   
       if (response?.data?.success) {
         setOrderId(response.data.orderId || response.data.order._id);
-        setCartItems({});
+        
+        // Only clear cart if it's not a Buy Now order
+        if (!buyNowItem) {
+          setCartItems({});
+        }
+        
         setBuyNowItem(null);
         
         // Wait a moment before navigating to ensure state updates
