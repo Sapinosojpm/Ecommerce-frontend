@@ -655,23 +655,32 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   // Fetch user cart data
   const getUserCart = async (userToken) => {
     try {
-      const userId = localStorage.getItem("userId"); // or however you store it
-  
+      const userId = localStorage.getItem("userId");
+      
       const response = await axios.post(
         `${backendUrl}/api/cart/get`,
-        { userId }, // 💡 Send userId in body
-        { headers: { token: userToken } }
+        { userId }, // Explicitly send userId in body
+        { 
+          headers: { 
+            Authorization: `Bearer ${userToken}` // Standard auth header
+          } 
+        }
       );
   
       if (response.data.success) {
         setCartItems(response.data.cartData || {});
+      } else {
+        toast.error(response.data.message || "Failed to load cart");
       }
     } catch (error) {
-      console.error(error);
+      console.error("Error fetching cart:", {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       toast.error("Failed to load cart data.");
     }
   };
-  
 
   // Initial data loading
   useEffect(() => {
