@@ -336,7 +336,14 @@ const ShopContextProvider = (props) => {
       }
     }
   };
-
+  useEffect(() => {
+  if (!token && localStorage.getItem("token")) {
+    const savedToken = localStorage.getItem("token");
+    setToken(savedToken);
+    getUserCart(savedToken);
+  }
+}, [token]);
+console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   // New buyNow function
   const buyNow = async (productId, quantity, variations = null) => {
     console.log("Buy now :", { itemId, quantity, variations });
