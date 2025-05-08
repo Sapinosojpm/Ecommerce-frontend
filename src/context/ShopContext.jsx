@@ -655,11 +655,14 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   // Fetch user cart data
   const getUserCart = async (userToken) => {
     try {
+      const userId = localStorage.getItem("userId"); // or however you store it
+  
       const response = await axios.post(
         `${backendUrl}/api/cart/get`,
-        {},
+        { userId }, // 💡 Send userId in body
         { headers: { token: userToken } }
       );
+  
       if (response.data.success) {
         setCartItems(response.data.cartData || {});
       }
@@ -668,6 +671,7 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
       toast.error("Failed to load cart data.");
     }
   };
+  
 
   // Initial data loading
   useEffect(() => {
