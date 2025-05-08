@@ -173,7 +173,7 @@ const Login = () => {
   const handleGoogleLoginSuccess = async (response) => {
     try {
       setLoading(true);
-      toast.info("Authenticating with Google...");
+      // toast.info("Authenticating with Google...");
       const { credential } = response;
 
       if (!credential) {
@@ -187,7 +187,7 @@ const Login = () => {
 
       if (backendResponse.data.success) {
         await handleLoginSuccess(backendResponse.data);
-        toast.success("Logged in successfully with Google!");
+        // toast.success("Logged in successfully with Google!");
       } else {
         throw new Error(backendResponse.data.message || "Google login failed");
       }
