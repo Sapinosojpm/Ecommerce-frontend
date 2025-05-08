@@ -674,14 +674,14 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
     getProductsData();
   }, []);
 
-  // Check token and load user cart
   useEffect(() => {
-    if (!token && localStorage.getItem("token")) {
-      const savedToken = localStorage.getItem("token");
+    const savedToken = localStorage.getItem("token");
+    if (savedToken) {
       setToken(savedToken);
-      getUserCart(savedToken);
+      getUserCart(savedToken); // ← Will use old token state if setToken is async
     }
-  }, [token]);
+  }, []);
+  
 
   // Context value
   const contextValue = {
