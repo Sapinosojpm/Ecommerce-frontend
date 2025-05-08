@@ -17,9 +17,11 @@ const Cart = () => {
     updateQuantity,
     navigate,
     clearCart,
+    userId,
   } = useContext(ShopContext);
 
   const [cartData, setCartData] = useState([]);
+  const [quantityErrors, setQuantityErrors] = useState({});
 
   useLayoutEffect(() => {
     const lenis = new Lenis({
@@ -38,25 +40,42 @@ const Cart = () => {
   }, []);
 
   useEffect(() => {
-    const tempData = [];
-    for (const key in cartItems) {
-      const item = cartItems[key];
-      if (item && item.quantity > 0) {
-        tempData.push({
-          key, // full key (with variation)
-          ...item,
-        });
+    console.log("cartItems:", cartItems); // Debug
+    if (products.length > 0) {
+      const tempData = [];
+      for (const itemId in cartItems) {
+        const item = cartItems[itemId];
+        if (item && item.quantity > 0) {
+          tempData.push({
+            _id: itemId,
+            quantity: item.quantity,
+            variations: item.variations || null,
+          });
+        }
       }
+      setCartData(tempData);
     }
-    setCartData(tempData);
-  }, [cartItems]);
+  }, [cartItems, products]);
+  
 
   const isCartEmpty = cartData.length === 0;
 
   const isCheckoutDisabled = cartData.some((item) => {
-    const product = products.find((p) => p._id === item.itemId);
-    return !product || product.quantity === 0;
+    const productData = products.find((product) => product._id === item._id);
+    return productData && productData.quantity === 0;
   });
+
+  const getTotalPrice = () => {
+    return cartData.reduce((total, item) => {
+      const productData = products.find((product) => product._id === item._id);
+      if (!productData) return total;
+
+      const finalPrice = productData.discount
+        ? productData.price * (1 - productData.discount / 100)
+        : productData.price;
+      return total + finalPrice * item.quantity;
+    }, 0);
+  };
 
   const handleClearCart = async () => {
     const savedToken = localStorage.getItem("token");
@@ -88,20 +107,18 @@ const Cart = () => {
     }
   };
 
-  const handleQuantityChange = (key, newQuantity) => {
+  // Update quantity when input changes
+  const handleQuantityChange = (itemId, newQuantity) => {
     if (newQuantity <= 0) {
-      updateQuantity(key, 0);
+      // Remove item from cart
+      updateQuantity(itemId, 0);
       return;
     }
 
-    updateQuantity(key, newQuantity);
+    updateQuantity(itemId, newQuantity);
   };
 
-  const getTotalPrice = () => {
-    return cartData.reduce((total, item) => {
-      return total + item.finalPrice * item.quantity;
-    }, 0);
-  };
+  
 
   return (
     <div className="border-t pt-[80px] md:pt-[7%] sm:pt-[10%] md:px-[7vw] px-4">
@@ -132,8 +149,15 @@ const Cart = () => {
           </p>
         ) : (
           cartData.map((item, index) => {
-            const product = products.find((p) => p._id === item.itemId);
-            if (!product) return null;
+            const productData = products.find(
+              (product) => product._id === item._id
+            );
+
+            if (!productData) return null;
+
+            const finalPrice = productData.discount
+              ? productData.price * (1 - productData.discount / 100)
+              : productData.price;
 
             return (
               <div
@@ -143,49 +167,88 @@ const Cart = () => {
                 <div className="flex items-start gap-6">
                   <img
                     className="w-16 sm:w-20"
-                    src={product.image[0]}
-                    alt={product.name}
+                    src={productData.image[0]}
+                    alt={productData.name}
                   />
                   <div>
                     <p className="text-xs font-medium sm:text-lg">
-                      {product.name}
+                      {productData.name}
                     </p>
                     <p className="text-xs font-light text-gray-500 sm:text-sm">
-                      {product.description}
+                      {productData.description}
                     </p>
+                    <div className="flex items-center gap-5 mt-2">
+                      {productData.discount > 0 && (
+                        <p className="text-gray-500 line-through">
+                          {currency}
+                          {productData.price.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
 
-                    <div className="mt-2 space-y-2 text-sm">
-                      {item.variations &&
-                        Object.entries(item.variations).map(
-                          ([type, value]) => (
+                    {cartItems[item._id]?.variations && (
+                      <div className="mt-2 space-y-2">
+                        {Object.entries(cartItems[item._id].variations).map(
+                          ([variationType, variationData]) => (
                             <div
-                              key={type}
-                              className="pl-2 border-l-2 border-gray-300"
+                              key={variationType}
+                              className="pl-3 text-sm border-l-2 border-gray-200"
                             >
-                              <strong>{type}:</strong> {value}
+                              <div className="flex gap-1">
+                                <span className="font-medium capitalize">
+                                  {variationType}:
+                                </span>
+                                <span className="text-gray-700">
+                                  {variationData.name}
+                                </span>
+                              </div>
+
+                              {/* Price breakdown */}
+                              <div className="flex gap-1 mt-1 text-sm font-semibold">
+                                <span className="text-gray-700">Price:</span>
+                                <span>
+                                  {currency}
+                                  {(
+                                    finalPrice +
+                                    (variationData.priceAdjustment || 0)
+                                  ).toLocaleString()}
+                                </span>
+                              </div>
+
+                              {/* Available stock */}
+                              <div className="flex gap-1 mt-1">
+                                <span className="text-gray-600">Stock:</span>
+                                <span
+                                  className={
+                                    variationData.quantity > 0
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }
+                                >
+                                  {variationData.quantity} available
+                                </span>
+                              </div>
                             </div>
                           )
                         )}
-                      <div>
-                        <strong>Price:</strong> {currency}
-                        {item.finalPrice.toLocaleString()}
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
                 <input
                   onChange={(e) =>
-                    handleQuantityChange(item.key, Number(e.target.value))
+                    handleQuantityChange(item._id, Number(e.target.value))
                   }
                   className="px-1 py-1 border max-w-10 sm:max-w-20 sm:px-2"
                   type="number"
                   min={1}
+                  max={productData.quantity}
                   defaultValue={item.quantity}
                 />
 
                 <img
-                  onClick={() => handleQuantityChange(item.key, 0)}
+                  onClick={() => handleQuantityChange(item._id, 0)}
                   className="w-4 mr-4 cursor-pointer sm:w-5"
                   src={assets.bin_icon}
                   alt="Remove item"
