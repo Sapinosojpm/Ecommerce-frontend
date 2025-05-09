@@ -2,7 +2,6 @@ import React, { useContext, useEffect, useState, useLayoutEffect, useMemo } from
 import { ShopContext } from "../context/ShopContext";
 import Title from "../components/Title";
 import { assets } from "../assets/assets";
-import CartTotal from "../components/CartTotal";
 import { Link } from "react-router-dom";
 import Lenis from "lenis";
 import { toast } from "react-toastify";
@@ -16,13 +15,13 @@ const Cart = () => {
     cartItems,
     updateQuantity,
     navigate,
+    removeFromCart,
     clearCart,
-    userId,
   } = useContext(ShopContext);
 
   const [cartData, setCartData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [quantityErrors, setQuantityErrors] = useState({});
+  const [deletingItem, setDeletingItem] = useState(null);
 
   useLayoutEffect(() => {
     const lenis = new Lenis({
@@ -40,7 +39,7 @@ const Cart = () => {
     return () => lenis.destroy();
   }, []);
 
-  // Properly initialize cart data with stock information
+  // Initialize cart data
   useEffect(() => {
     if (products.length > 0) {
       const tempData = [];
@@ -49,7 +48,6 @@ const Cart = () => {
         const product = products.find(p => p._id === itemId);
         
         if (product && item.quantity > 0) {
-          // Calculate available stock for variations
           let availableStock = product.quantity;
           if (item.variations && product.variations?.length > 0) {
             availableStock = Math.min(
@@ -66,7 +64,7 @@ const Cart = () => {
             quantity: item.quantity,
             variations: item.variations || null,
             productData: product,
-            availableStock // Store available stock with each item
+            availableStock
           });
         }
       }
@@ -82,7 +80,6 @@ const Cart = () => {
     return cartData.some(item => item.quantity > item.availableStock);
   }, [cartData, loading, isCartEmpty]);
 
-  // Update total price calculation to include variations
   const getTotalPrice = () => {
     return cartData.reduce((total, item) => {
       const productData = item.productData;
@@ -92,7 +89,6 @@ const Cart = () => {
         ? productData.price * (1 - productData.discount / 100)
         : productData.price;
 
-      // Add variation price adjustments
       let variationAdjustment = 0;
       if (item.variations) {
         for (const variation of Object.values(item.variations)) {
@@ -107,7 +103,6 @@ const Cart = () => {
 
   const handleClearCart = async () => {
     const savedToken = localStorage.getItem("token");
-
     if (!savedToken) {
       toast.error("You need to be logged in to clear the cart.");
       return;
@@ -123,7 +118,6 @@ const Cart = () => {
       });
 
       const data = await response.json();
-
       if (data.success) {
         clearCart();
         toast.success("Cart cleared successfully");
@@ -136,23 +130,37 @@ const Cart = () => {
     }
   };
 
-  // Update quantity when input changes
-  const handleQuantityChange = (itemId, newQuantity) => {
-    if (newQuantity <= 0) {
-      // Remove item from cart
-      updateQuantity(itemId, 0);
-      return;
+// Updated handleDeleteItem function
+const handleDeleteItem = async (itemId) => {
+  setDeletingItem(itemId);
+  try {
+    const success = await removeFromCart(itemId);
+    if (success) {
+      // Update local cartData state immediately
+      setCartData(prev => prev.filter(item => item._id !== itemId));
     }
+  } catch (error) {
+    toast.error("Failed to remove item");
+  } finally {
+    setDeletingItem(null);
+  }
+};
 
-    // Check stock before updating
-    const cartItem = cartData.find(item => item._id === itemId);
-    if (cartItem && newQuantity > cartItem.availableStock) {
-      toast.error(`Only ${cartItem.availableStock} available in stock`);
-      return;
-    }
+// Updated handleQuantityChange function
+const handleQuantityChange = (itemId, newQuantity) => {
+  if (newQuantity <= 0) {
+    handleDeleteItem(itemId);
+    return;
+  }
 
-    updateQuantity(itemId, newQuantity);
-  };
+  const cartItem = cartData.find(item => item._id === itemId);
+  if (cartItem && newQuantity > cartItem.availableStock) {
+    toast.error(`Only ${cartItem.availableStock} available in stock`);
+    return;
+  }
+
+  updateQuantity(itemId, newQuantity);
+};
 
   if (loading) {
     return (
@@ -212,7 +220,7 @@ const Cart = () => {
 
             return (
               <div
-                key={index}
+                key={`${item._id}-${index}`}
                 className="py-4 border-t border-b text-gray-700 grid grid-cols-[4fr_0.5fr_0.5fr] sm:grid-cols-[4fr_2fr_0.5fr] items-center gap-4"
               >
                 <div className="flex items-start gap-6">
@@ -267,14 +275,6 @@ const Cart = () => {
                                   </span>
                                 </div>
 
-                                {/* <div className="flex gap-1 mt-1 text-sm font-semibold">
-                                  <span className="text-gray-700">Price Adjustment:</span>
-                                  <span>
-                                    {currency}
-                                    {(variationData.priceAdjustment || 0).toLocaleString()}
-                                  </span>
-                                </div> */}
-
                                 <div className="flex gap-1 mt-1">
                                   <span className="text-gray-600">Stock:</span>
                                   <span
@@ -307,12 +307,31 @@ const Cart = () => {
                   value={item.quantity}
                 />
 
-                <img
-                  onClick={() => handleQuantityChange(item._id, 0)}
-                  className="w-4 mr-4 cursor-pointer sm:w-5"
-                  src={assets.bin_icon}
-                  alt="Remove item"
-                />
+                <button
+                  onClick={() => handleDeleteItem(item._id)}
+                  className="w-4 mr-4 sm:w-5"
+                  disabled={deletingItem === item._id}
+                  aria-label="Remove item"
+                >
+                  {deletingItem === item._id ? (
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-4 h-4 text-gray-400 animate-spin sm:w-5 sm:h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+                    </svg>
+                  ) : (
+                    <img
+                      src={assets.bin_icon}
+                      className="w-4 h-4 cursor-pointer sm:w-5 sm:h-5"
+                      alt="Remove item"
+                    />
+                  )}
+                </button>
               </div>
             );
           })

@@ -461,37 +461,74 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   }, []);
 
   // Update cart quantity
-  const updateQuantity = async (itemId, quantity) => {
-    if (quantity < 0) {
-      toast.error("Quantity cannot be negative.");
-      return;
+ // In the updateQuantity function, add proper error handling and state update
+const updateQuantity = async (itemId, quantity) => {
+  if (quantity < 0) {
+    toast.error("Quantity cannot be negative.");
+    return false; // Return false to indicate failure
+  }
+
+  try {
+    const updatedCart = { ...cartItems };
+    
+    if (quantity === 0) {
+      delete updatedCart[itemId]; // Remove item completely when quantity is 0
+    } else {
+      updatedCart[itemId] = {
+        ...updatedCart[itemId],
+        quantity: quantity,
+      };
     }
 
-    const updatedCart = {
-      ...cartItems,
-      [itemId]: {
-        ...cartItems[itemId], // Keep existing properties (e.g., variations)
-        quantity: quantity, // Update only the quantity
-      },
-    };
-
+    // Update local state immediately
     setCartItems(updatedCart);
 
+    // Sync with backend if logged in
     if (token) {
-      try {
-        await axios.post(
-          `${backendUrl}/api/cart/update`,
-          { itemId, quantity },
-          { headers: { token } }
-        );
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to update cart quantity.");
-        // Revert on error
-        setCartItems(cartItems);
-      }
+      await axios.post(
+        `${backendUrl}/api/cart/update`,
+        { itemId, quantity },
+        { headers: { token } }
+      );
     }
-  };
+
+    return true; // Return true to indicate success
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to update cart quantity.");
+    // Revert to previous state on error
+    setCartItems(cartItems);
+    return false;
+  }
+};
+ // New removeFromCart function
+ const removeFromCart = async (itemId) => {
+  try {
+    const updatedCart = { ...cartItems };
+    delete updatedCart[itemId];
+    
+    // Update local state immediately
+    setCartItems(updatedCart);
+
+    // If user is logged in, sync with backend
+    if (token) {
+      await axios.post(
+        `${backendUrl}/api/cart/remove`,
+        { itemId },
+        { headers: { token } }
+      );
+    }
+
+    toast.success("Item removed from cart");
+    return true;
+  } catch (error) {
+    console.error("Error removing item:", error);
+    toast.error("Failed to remove item");
+    // Revert to previous state on error
+    setCartItems(cartItems);
+    return false;
+  }
+};
 
   // Get cart count
   // In your ShopContext.js or wherever getCartCount is defined
@@ -662,37 +699,32 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   const getUserCart = async (userToken) => {
     try {
       const userId = localStorage.getItem("userId");
-      
       const response = await axios.post(
         `${backendUrl}/api/cart/get`,
         { userId },
-        { 
-          headers: { 
-            Authorization: `Bearer ${userToken}` 
-          } 
-        }
+        { headers: { Authorization: `Bearer ${userToken}` } }
       );
   
       if (response.data.success) {
-        // Normalize the cart data structure
         const normalizedCart = {};
+        // Filter out items with quantity <= 0
         Object.entries(response.data.cartData || {}).forEach(([key, item]) => {
-          normalizedCart[item.itemId] = {
-            quantity: item.quantity,
-            variations: item.variations || null,
-            variationAdjustment: item.variationAdjustment || 0,
-            finalPrice: item.finalPrice || 0
-          };
+          if (item.quantity > 0) {
+            normalizedCart[item.itemId] = {
+              quantity: item.quantity,
+              variations: item.variations || null,
+              variationAdjustment: item.variationAdjustment || 0,
+              finalPrice: item.finalPrice || 0
+            };
+          }
         });
         setCartItems(normalizedCart);
       }
     } catch (error) {
       console.error("Error fetching cart:", error);
-      console.log("Initial cart load:", {
-        token: localStorage.getItem("token"),
-        cartItems: cartItems,
-        products: products.length
-      });
+      // Fallback to localStorage if available
+      const savedCart = JSON.parse(localStorage.getItem("cartItems") || {});
+      setCartItems(savedCart);
     }
   };
   useEffect(() => {
@@ -744,6 +776,7 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
     setCards,
     intros,
     setIntros,
+    removeFromCart,
     fetchProduct,
     setMemberCards,
     getCartAmount, // ✅ Use memoized total
