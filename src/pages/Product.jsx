@@ -546,46 +546,42 @@ const Product = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-4">
-                    <AnimatedButton
-  text="ADD TO CART"
-  successText="Added!"
-  onClick={() => {
-    const variationsToUse = Object.keys(selectedVariations).length > 0 
-      ? getDefaultVariations() 
-      : null;
-    
-    addToCart(
-      productData._id,
-      quantity,
-      variationsToUse,
-      finalPrice
-    );
-    toast.success("Product added to cart successfully!");
-  }}
-  icon={<FaShoppingCart className="w-6 h-6 text-white" />}
-  disabled={selectedVariationQuantity === 0}
-/>
+                      <AnimatedButton
+                        text="ADD TO CART"
+                        successText="Added!"
+                        onClick={() => {
+                          addToCart(
+                            productData._id,
+                            quantity,
+                            Object.keys(selectedVariations).length > 0 
+                              ? selectedVariations 
+                              : null,
+                            finalPrice
+                          );
+                          toast.success("Product added to cart successfully!");
+                        }}
+                        icon={<FaShoppingCart className="w-6 h-6 text-white" />}
+                        disabled={selectedVariationQuantity === 0}
+                      />
 
-<AnimatedButton
-  text="BUY NOW"
-  successText="Redirecting..."
-  onClick={() => {
-    const variationsToUse = Object.keys(selectedVariations).length > 0 
-      ? getDefaultVariations() 
-      : null;
-    
-    handleBuyNow(
-      productData._id,
-      quantity,
-      variationsToUse,
-      finalPrice,
-      calculatePrice
-    );
-    toast.success("Redirecting to checkout...");
-  }}
-  className="bg-blue-600 hover:bg-blue-700"
-  disabled={availableQuantity === 0}
-/>
+                      <AnimatedButton
+                        text="BUY NOW"
+                        successText="Redirecting..."
+                        onClick={() => {
+                          handleBuyNow(
+                            productData._id,
+                            quantity,
+                            Object.keys(selectedVariations).length > 0 
+                              ? selectedVariations 
+                              : null,
+                            finalPrice,
+                            calculatePrice
+                          );
+                          toast.success("Redirecting to checkout...");
+                        }}
+                        className="bg-blue-600 hover:bg-blue-700"
+                        disabled={availableQuantity === 0}
+                      />
 
                       <WishlistIcon
                         productId={productData._id}
