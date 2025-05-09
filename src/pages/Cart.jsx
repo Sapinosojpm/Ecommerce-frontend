@@ -1,10 +1,17 @@
-import React, { useContext, useEffect, useState, useLayoutEffect, useMemo } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useState,
+  useLayoutEffect,
+  useMemo,
+} from "react";
 import { ShopContext } from "../context/ShopContext";
 import Title from "../components/Title";
 import { assets } from "../assets/assets";
 import { Link } from "react-router-dom";
 import Lenis from "lenis";
 import { toast } from "react-toastify";
+import { io } from "socket.io-client";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -17,12 +24,81 @@ const Cart = () => {
     navigate,
     removeFromCart,
     clearCart,
+    user,
   } = useContext(ShopContext);
 
   const [cartData, setCartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingItem, setDeletingItem] = useState(null);
+  const [socket, setSocket] = useState(null);
 
+  // Initialize WebSocket connection
+  useEffect(() => {
+    const newSocket = io(backendUrl, {
+      withCredentials: true,
+      transports: ['websocket'],
+    });
+    
+    setSocket(newSocket);
+
+    return () => {
+      if (newSocket) newSocket.disconnect();
+    };
+  }, []);
+
+  // Join cart room and listen for updates
+  useEffect(() => {
+    if (socket && user?._id) {
+      socket.emit('join-cart-room', user._id);
+      
+      socket.on('cart-updated', (updatedCart) => {
+        // Update local cart state when server sends updates
+        const tempData = [];
+        for (const itemId in updatedCart) {
+          const item = updatedCart[itemId];
+          const product = products.find((p) => p._id === itemId);
+
+          if (product && item.quantity > 0) {
+            let availableStock = product.quantity;
+
+            if (item.variations && product.variations?.length > 0) {
+              const variationQuantities = Object.entries(item.variations).map(
+                ([varName, varData]) => {
+                  const variation = product.variations.find(
+                    (v) => v.name === varName
+                  );
+                  if (!variation) return 0;
+
+                  const option = variation.options.find(
+                    (o) => o.name === varData.name
+                  );
+                  return option?.quantity || 0;
+                }
+              );
+
+              availableStock = Math.min(...variationQuantities);
+            }
+
+            tempData.push({
+              _id: itemId,
+              quantity: item.quantity,
+              variations: item.variations || null,
+              productData: product,
+              availableStock,
+            });
+          }
+        }
+        setCartData(tempData);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        socket.off('cart-updated');
+      }
+    };
+  }, [socket, user, products]);
+  
   useLayoutEffect(() => {
     const lenis = new Lenis({
       smooth: true,
@@ -45,21 +121,27 @@ const Cart = () => {
       const tempData = [];
       for (const itemId in cartItems) {
         const item = cartItems[itemId];
-        const product = products.find(p => p._id === itemId);
-        
+        const product = products.find((p) => p._id === itemId);
+
         if (product && item.quantity > 0) {
           let availableStock = product.quantity;
-          
+
           // Calculate available stock based on variations if they exist
           if (item.variations && product.variations?.length > 0) {
-            const variationQuantities = Object.entries(item.variations).map(([varName, varData]) => {
-              const variation = product.variations.find(v => v.name === varName);
-              if (!variation) return 0;
-              
-              const option = variation.options.find(o => o.name === varData.name);
-              return option?.quantity || 0;
-            });
-            
+            const variationQuantities = Object.entries(item.variations).map(
+              ([varName, varData]) => {
+                const variation = product.variations.find(
+                  (v) => v.name === varName
+                );
+                if (!variation) return 0;
+
+                const option = variation.options.find(
+                  (o) => o.name === varData.name
+                );
+                return option?.quantity || 0;
+              }
+            );
+
             availableStock = Math.min(...variationQuantities);
           }
 
@@ -68,7 +150,7 @@ const Cart = () => {
             quantity: item.quantity,
             variations: item.variations || null,
             productData: product,
-            availableStock
+            availableStock,
           });
         }
       }
@@ -81,7 +163,7 @@ const Cart = () => {
 
   const isCheckoutDisabled = useMemo(() => {
     if (loading || isCartEmpty) return true;
-    return cartData.some(item => item.quantity > item.availableStock);
+    return cartData.some((item) => item.quantity > item.availableStock);
   }, [cartData, loading, isCartEmpty]);
 
   const getTotalPrice = () => {
@@ -140,7 +222,7 @@ const Cart = () => {
     try {
       const success = await removeFromCart(itemId);
       if (success) {
-        setCartData(prev => prev.filter(item => item._id !== itemId));
+        setCartData((prev) => prev.filter((item) => item._id !== itemId));
       }
     } catch (error) {
       toast.error("Failed to remove item");
@@ -155,7 +237,7 @@ const Cart = () => {
       return;
     }
 
-    const cartItem = cartData.find(item => item._id === itemId);
+    const cartItem = cartData.find((item) => item._id === itemId);
     if (cartItem && newQuantity > cartItem.availableStock) {
       toast.error(`Only ${cartItem.availableStock} available in stock`);
       return;
@@ -180,7 +262,7 @@ const Cart = () => {
       <div className="text-2xl mb-3 pt-[40px]">
         <Title text1={"YOUR"} text2={"CART"} />
       </div>
-      
+
       <div className="flex justify-end mb-4">
         <button
           onClick={handleClearCart}
@@ -252,61 +334,69 @@ const Cart = () => {
                       </p>
                     </div>
 
-{item.variations && (
-  <div className="mt-2 space-y-2">
-    {Object.entries(item.variations).map(
-      ([variationType, variationData]) => {
-        // Only show the variation if it's actually selected
-        if (variationData && variationData.name) {
-          const variation = productData.variations?.find(
-            v => v.name === variationType
-          );
-          const option = variation?.options.find(
-            o => o.name === variationData.name
-          );
-          const optionQuantity = option?.quantity || 0;
+                    {item.variations && (
+                      <div className="mt-2 space-y-2">
+                        {Object.entries(item.variations).map(
+                          ([variationType, variationData]) => {
+                            // Only show the variation if it's actually selected
+                            if (variationData && variationData.name) {
+                              const variation = productData.variations?.find(
+                                (v) => v.name === variationType
+                              );
+                              const option = variation?.options.find(
+                                (o) => o.name === variationData.name
+                              );
+                              const optionQuantity = option?.quantity || 0;
 
-          return (
-            <div
-              key={variationType}
-              className="pl-3 text-sm border-l-2 border-gray-200"
-            >
-              <div className="flex gap-1">
-                <span className="font-medium capitalize">
-                  {variationType}:
-                </span>
-                <span className="text-gray-700">
-                  {variationData.name}
-                  {variationData.priceAdjustment ? (
-                    <span className="ml-1 text-xs text-gray-500">
-                      ({variationData.priceAdjustment > 0 ? '+' : ''}
-                      {currency}
-                      {Math.abs(variationData.priceAdjustment).toLocaleString()})
-                    </span>
-                  ) : null}
-                </span>
-              </div>
+                              return (
+                                <div
+                                  key={variationType}
+                                  className="pl-3 text-sm border-l-2 border-gray-200"
+                                >
+                                  <div className="flex gap-1">
+                                    <span className="font-medium capitalize">
+                                      {variationType}:
+                                    </span>
+                                    <span className="text-gray-700">
+                                      {variationData.name}
+                                      {variationData.priceAdjustment ? (
+                                        <span className="ml-1 text-xs text-gray-500">
+                                          (
+                                          {variationData.priceAdjustment > 0
+                                            ? "+"
+                                            : ""}
+                                          {currency}
+                                          {Math.abs(
+                                            variationData.priceAdjustment
+                                          ).toLocaleString()}
+                                          )
+                                        </span>
+                                      ) : null}
+                                    </span>
+                                  </div>
 
-              <div className="flex gap-1 mt-1">
-                <span className="text-gray-600">Stock:</span>
-                <span
-                  className={
-                    optionQuantity > 0
-                      ? "text-green-600"
-                      : "text-red-600"
-                  }
-                >
-                  {optionQuantity} available
-                </span>
-              </div>
-            </div>
-          );
-        }
-        return null;
-      }
-    )}
-  </div>
-)}
+                                  <div className="flex gap-1 mt-1">
+                                    <span className="text-gray-600">
+                                      Stock:
+                                    </span>
+                                    <span
+                                      className={
+                                        optionQuantity > 0
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                      }
+                                    >
+                                      {optionQuantity} available
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 

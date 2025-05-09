@@ -484,42 +484,47 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
 
   // Update cart quantity
  // In the updateQuantity function, add proper error handling and state update
-const updateQuantity = async (itemId, quantity) => {
-  if (quantity < 0) {
-    toast.error("Quantity cannot be negative.");
-    return false; // Return false to indicate failure
-  }
-
+// In your ShopContext provider
+const updateQuantity = async (itemId, newQuantity) => {
   try {
-    const updatedCart = { ...cartItems };
-    
-    if (quantity === 0) {
-      delete updatedCart[itemId]; // Remove item completely when quantity is 0
+    const savedToken = localStorage.getItem("token");
+    if (!savedToken) {
+      toast.error("You need to be logged in to update cart.");
+      return false;
+    }
+
+    const response = await fetch(`${backendUrl}/api/cart/update`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${savedToken}`,
+      },
+      body: JSON.stringify({ itemId, quantity: newQuantity }),
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      setCartItems((prev) => ({
+        ...prev,
+        [itemId]: {
+          ...prev[itemId],
+          quantity: newQuantity,
+        },
+      }));
+      
+      // Emit cart update to server
+      if (socket) {
+        socket.emit('cart-update', { userId: user._id });
+      }
+      
+      return true;
     } else {
-      updatedCart[itemId] = {
-        ...updatedCart[itemId],
-        quantity: quantity,
-      };
+      toast.error(data.message || "Failed to update cart.");
+      return false;
     }
-
-    // Update local state immediately
-    setCartItems(updatedCart);
-
-    // Sync with backend if logged in
-    if (token) {
-      await axios.post(
-        `${backendUrl}/api/cart/update`,
-        { itemId, quantity },
-        { headers: { token } }
-      );
-    }
-
-    return true; // Return true to indicate success
   } catch (error) {
-    console.error(error);
-    toast.error("Failed to update cart quantity.");
-    // Revert to previous state on error
-    setCartItems(cartItems);
+    console.error("Error updating cart:", error);
+    toast.error("Something went wrong. Please try again.");
     return false;
   }
 };
