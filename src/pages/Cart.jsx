@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState, useLayoutEffect } from "react";
+import React, { useContext, useEffect, useState, useLayoutEffect, useMemo } from "react";
 import { ShopContext } from "../context/ShopContext";
 import Title from "../components/Title";
 import { assets } from "../assets/assets";
@@ -21,6 +21,7 @@ const Cart = () => {
   } = useContext(ShopContext);
 
   const [cartData, setCartData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [quantityErrors, setQuantityErrors] = useState({});
 
   useLayoutEffect(() => {
@@ -39,35 +40,52 @@ const Cart = () => {
     return () => lenis.destroy();
   }, []);
 
+  // Properly initialize cart data with stock information
   useEffect(() => {
-    console.log("cartItems:", cartItems); // Debug
     if (products.length > 0) {
       const tempData = [];
       for (const itemId in cartItems) {
         const item = cartItems[itemId];
-        if (item && item.quantity > 0) {
+        const product = products.find(p => p._id === itemId);
+        
+        if (product && item.quantity > 0) {
+          // Calculate available stock for variations
+          let availableStock = product.quantity;
+          if (item.variations && product.variations?.length > 0) {
+            availableStock = Math.min(
+              ...Object.entries(item.variations).map(([varName, varData]) => {
+                const variation = product.variations.find(v => v.name === varName);
+                const option = variation?.options.find(o => o.name === varData.name);
+                return option?.quantity || 0;
+              })
+            );
+          }
+
           tempData.push({
             _id: itemId,
             quantity: item.quantity,
             variations: item.variations || null,
+            productData: product,
+            availableStock // Store available stock with each item
           });
         }
       }
       setCartData(tempData);
+      setLoading(false);
     }
   }, [cartItems, products]);
 
   const isCartEmpty = cartData.length === 0;
 
-  const isCheckoutDisabled = cartData.some((item) => {
-    const productData = products.find((product) => product._id === item._id);
-    return productData && productData.quantity === 0;
-  });
+  const isCheckoutDisabled = useMemo(() => {
+    if (loading || isCartEmpty) return true;
+    return cartData.some(item => item.quantity > item.availableStock);
+  }, [cartData, loading, isCartEmpty]);
 
   // Update total price calculation to include variations
   const getTotalPrice = () => {
     return cartData.reduce((total, item) => {
-      const productData = products.find((product) => product._id === item._id);
+      const productData = item.productData;
       if (!productData) return total;
 
       let basePrice = productData.discount
@@ -108,6 +126,7 @@ const Cart = () => {
 
       if (data.success) {
         clearCart();
+        toast.success("Cart cleared successfully");
       } else {
         toast.error(data.message || "Failed to clear cart.");
       }
@@ -125,15 +144,33 @@ const Cart = () => {
       return;
     }
 
+    // Check stock before updating
+    const cartItem = cartData.find(item => item._id === itemId);
+    if (cartItem && newQuantity > cartItem.availableStock) {
+      toast.error(`Only ${cartItem.availableStock} available in stock`);
+      return;
+    }
+
     updateQuantity(itemId, newQuantity);
   };
+
+  if (loading) {
+    return (
+      <div className="border-t pt-[80px] md:pt-[7%] sm:pt-[10%] md:px-[7vw] px-4">
+        <div className="text-2xl mb-3 pt-[40px]">
+          <Title text1={"LOADING"} text2={"CART"} />
+        </div>
+        <div className="py-10 text-center">Loading your cart...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="border-t pt-[80px] md:pt-[7%] sm:pt-[10%] md:px-[7vw] px-4">
       <div className="text-2xl mb-3 pt-[40px]">
         <Title text1={"YOUR"} text2={"CART"} />
       </div>
-
+      
       <div className="flex justify-end mb-4">
         <button
           onClick={handleClearCart}
@@ -157,10 +194,7 @@ const Cart = () => {
           </p>
         ) : (
           cartData.map((item, index) => {
-            const productData = products.find(
-              (product) => product._id === item._id
-            );
-
+            const productData = item.productData;
             if (!productData) return null;
 
             let basePrice = productData.discount
@@ -201,52 +235,61 @@ const Cart = () => {
                           {productData.price.toLocaleString()}
                         </p>
                       )}
+                      <p className="text-lg font-semibold">
+                        {currency}
+                        {finalPrice.toLocaleString()}
+                      </p>
                     </div>
 
-                    {cartItems[item._id]?.variations && (
+                    {item.variations && (
                       <div className="mt-2 space-y-2">
-                        {Object.entries(cartItems[item._id].variations).map(
-                          ([variationType, variationData]) => (
-                            <div
-                              key={variationType}
-                              className="pl-3 text-sm border-l-2 border-gray-200"
-                            >
-                              <div className="flex gap-1">
-                                <span className="font-medium capitalize">
-                                  {variationType}:
-                                </span>
-                                <span className="text-gray-700">
-                                  {variationData.name}
-                                </span>
-                              </div>
+                        {Object.entries(item.variations).map(
+                          ([variationType, variationData]) => {
+                            const variation = productData.variations?.find(
+                              v => v.name === variationType
+                            );
+                            const option = variation?.options.find(
+                              o => o.name === variationData.name
+                            );
+                            const optionQuantity = option?.quantity || 0;
 
-                              {/* Price breakdown */}
-                              <div className="flex gap-1 mt-1 text-sm font-semibold">
-                                <span className="text-gray-700">Price:</span>
-                                <span>
-                                  {currency}
-                                  {(
-                                    finalPrice +
-                                    (variationData.priceAdjustment || 0)
-                                  ).toLocaleString()}
-                                </span>
-                              </div>
+                            return (
+                              <div
+                                key={variationType}
+                                className="pl-3 text-sm border-l-2 border-gray-200"
+                              >
+                                <div className="flex gap-1">
+                                  <span className="font-medium capitalize">
+                                    {variationType}:
+                                  </span>
+                                  <span className="text-gray-700">
+                                    {variationData.name}
+                                  </span>
+                                </div>
 
-                              {/* Available stock */}
-                              <div className="flex gap-1 mt-1">
-                                <span className="text-gray-600">Stock:</span>
-                                <span
-                                  className={
-                                    variationData.quantity > 0
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }
-                                >
-                                  {variationData.quantity} available
-                                </span>
+                                <div className="flex gap-1 mt-1 text-sm font-semibold">
+                                  <span className="text-gray-700">Price Adjustment:</span>
+                                  <span>
+                                    {currency}
+                                    {(variationData.priceAdjustment || 0).toLocaleString()}
+                                  </span>
+                                </div>
+
+                                <div className="flex gap-1 mt-1">
+                                  <span className="text-gray-600">Stock:</span>
+                                  <span
+                                    className={
+                                      optionQuantity > 0
+                                        ? "text-green-600"
+                                        : "text-red-600"
+                                    }
+                                  >
+                                    {optionQuantity} available
+                                  </span>
+                                </div>
                               </div>
-                            </div>
-                          )
+                            );
+                          }
                         )}
                       </div>
                     )}
@@ -260,8 +303,8 @@ const Cart = () => {
                   className="px-1 py-1 border max-w-10 sm:max-w-20 sm:px-2"
                   type="number"
                   min={1}
-                  max={productData.quantity}
-                  defaultValue={item.quantity}
+                  max={item.availableStock}
+                  value={item.quantity}
                 />
 
                 <img

@@ -38,6 +38,7 @@ const Product = () => {
 // Add this state above your component
 const [activeVariationName, setActiveVariationName] = useState(null);
 
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -207,10 +208,17 @@ const [activeVariationName, setActiveVariationName] = useState(null);
   // In Product.jsx
   // Replace your updateAvailableQuantity function with this:
   const updateAvailableQuantity = (selections) => {
-    if (!productData) return;
-
+    if (!productData) return 0;
+  
+    // If no variations, use main product quantity
+    if (!productData.variations || productData.variations.length === 0) {
+      const qty = productData.quantity || 0;
+      setAvailableQuantity(qty);
+      return qty;
+    }
+  
+    // With variations, find minimum available quantity
     let minQuantity = Infinity;
-
     Object.entries(selections).forEach(([variationName, selectedOption]) => {
       const variation = productData.variations.find(
         (v) => v.name === variationName
@@ -224,12 +232,8 @@ const [activeVariationName, setActiveVariationName] = useState(null);
         }
       }
     });
-
+  
     const finalQty = minQuantity === Infinity ? 0 : minQuantity;
-
-    // Log the quantity being set
-    console.log("Updated Available Quantity: ", finalQty);
-
     setAvailableQuantity(finalQty);
     return finalQty;
   };
@@ -272,7 +276,8 @@ const [activeVariationName, setActiveVariationName] = useState(null);
           }
         });
         setSelectedVariations(initialSelections);
-        updateAvailableQuantity(initialSelections);
+        const initialQty = updateAvailableQuantity(initialSelections);
+        setAvailableQuantity(initialQty); updateAvailableQuantity(initialSelections);
       } else {
         // No variations - use main product quantity
         setAvailableQuantity(foundProduct.quantity || 0);
@@ -305,6 +310,44 @@ const [activeVariationName, setActiveVariationName] = useState(null);
   useEffect(() => {
     fetchProductData();
   }, [productId, products]);
+
+  // Save selections to localStorage when they change
+useEffect(() => {
+  if (Object.keys(selectedVariations).length > 0) {
+    localStorage.setItem(
+      `product_${productId}_selections`,
+      JSON.stringify(selectedVariations)
+    );
+  }
+}, [selectedVariations, productId]);
+
+// Load selections from localStorage on mount
+useEffect(() => {
+  const savedSelections = localStorage.getItem(
+    `product_${productId}_selections`
+  );
+  if (savedSelections) {
+    try {
+      const parsed = JSON.parse(savedSelections);
+      // Validate that selections still exist in current product data
+      if (productData) {
+        const validSelections = {};
+        Object.entries(parsed).forEach(([name, option]) => {
+          const variation = productData.variations?.find(v => v.name === name);
+          if (variation && variation.options.some(opt => opt.name === option.name)) {
+            validSelections[name] = option;
+          }
+        });
+        if (Object.keys(validSelections).length > 0) {
+          setSelectedVariations(validSelections);
+          updateAvailableQuantity(validSelections);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to parse saved selections", e);
+    }
+  }
+}, [productData, productId]);
 
   // Calculate price when selected variations change
   useEffect(() => {
