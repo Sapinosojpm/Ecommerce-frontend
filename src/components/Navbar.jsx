@@ -11,7 +11,11 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userRole, setUserRole] = useState(localStorage.getItem("role") || null);
   const [logo, setLogo] = useState(null);
+  const [logoLoading, setLogoLoading] = useState(true);
+  const [logoError, setLogoError] = useState(false);
   const dropdownRef = useRef(null);
+  const profileDropdownRef = useRef(null);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   
   const {
     setShowSearch,
@@ -36,11 +40,14 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setMobileMenuOpen(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+        setProfileDropdownOpen(false);
       }
     };
 
@@ -62,16 +69,29 @@ const Navbar = () => {
     fetchLinks();
   }, []);
 
-  // Fetch Logo
+  // Fetch Logo with improved error handling
   useEffect(() => {
     const fetchLogo = async () => {
+      setLogoLoading(true);
+      setLogoError(false);
       try {
         const res = await fetch(`${backendUrl}/api/logo`);
+        if (!res.ok) throw new Error("Failed to fetch logo");
         const data = await res.json();
-        setLogo(`${backendUrl}${data.imageUrl}`);
+        
+        // Handle both full URL and relative path cases
+        const logoUrl = data.imageUrl.startsWith("http") 
+          ? data.imageUrl 
+          : `${backendUrl}${data.imageUrl}`;
+        
+        setLogo(logoUrl);
       } catch (error) {
         console.error("Error fetching logo:", error);
-        // Fallback to a default logo or name
+        setLogoError(true);
+        // Fallback to default logo in assets
+        setLogo(assets.logo);
+      } finally {
+        setLogoLoading(false);
       }
     };
     fetchLogo();
@@ -131,7 +151,21 @@ const Navbar = () => {
     <nav className="px-4 flex items-center justify-between py-4 font-medium md:px-[7vw] top-0 bg-white w-full z-50 fixed left-0 right-0 shadow-sm">
       {/* Logo */}
       <Link to="/" className="relative z-10">
-        {logo ? (
+        {logoLoading ? (
+          <motion.div 
+            className="w-32 h-10 bg-gray-100 rounded animate-pulse"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          />
+        ) : logoError ? (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-xl font-bold"
+          >
+            MyStore
+          </motion.div>
+        ) : (
           <motion.img
             src={logo}
             className="object-contain h-12 cursor-pointer"
@@ -139,12 +173,10 @@ const Navbar = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-          />
-        ) : (
-          <motion.div 
-            className="w-32 h-10 bg-gray-100 rounded animate-pulse"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            onError={() => {
+              setLogoError(true);
+              setLogo(assets.logo);
+            }}
           />
         )}
       </Link>
@@ -229,10 +261,16 @@ const Navbar = () => {
           </motion.button>
         )}
 
-        {/* Profile Icon & Dropdown */}
-        <div className="relative">
+        {/* Profile Icon & Dropdown - Fixed Click Issue */}
+        <div className="relative" ref={profileDropdownRef}>
           <motion.button
-            onClick={() => (token ? null : navigate("/login"))}
+            onClick={() => {
+              if (token) {
+                setProfileDropdownOpen(!profileDropdownOpen);
+              } else {
+                navigate("/login");
+              }
+            }}
             className="p-2 transition-colors rounded-full hover:bg-gray-100"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -245,43 +283,50 @@ const Navbar = () => {
             />
           </motion.button>
           
-          {token && (
-            <div className="group">
-              <div className="absolute right-0 z-20 hidden pt-2 group-hover:block">
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="px-1 py-2 bg-white border border-gray-100 rounded-md shadow-lg"
-                >
-                  <div className="flex flex-col w-36">
+          {token && profileDropdownOpen && (
+            <div className="absolute right-0 z-20 pt-2">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="px-1 py-2 bg-white border border-gray-100 rounded-md shadow-lg"
+              >
+                <div className="flex flex-col w-36">
+                  <motion.button
+                    onClick={() => {
+                      navigate("/profile");
+                      setProfileDropdownOpen(false);
+                    }}
+                    className="px-4 py-2 text-sm text-left transition-colors rounded-md hover:bg-gray-50"
+                    whileHover={{ x: 3 }}
+                  >
+                    Profile
+                  </motion.button>
+                  
+                  {userRole !== "admin" && (
                     <motion.button
-                      onClick={() => navigate("/profile")}
+                      onClick={() => {
+                        navigate("/orders");
+                        setProfileDropdownOpen(false);
+                      }}
                       className="px-4 py-2 text-sm text-left transition-colors rounded-md hover:bg-gray-50"
                       whileHover={{ x: 3 }}
                     >
-                      Profile
+                      Orders
                     </motion.button>
-                    
-                    {userRole !== "admin" && (
-                      <motion.button
-                        onClick={() => navigate("/orders")}
-                        className="px-4 py-2 text-sm text-left transition-colors rounded-md hover:bg-gray-50"
-                        whileHover={{ x: 3 }}
-                      >
-                        Orders
-                      </motion.button>
-                    )}
-                    
-                    <motion.button
-                      onClick={logout}
-                      className="px-4 py-2 text-sm text-left text-red-600 transition-colors rounded-md hover:bg-red-50"
-                      whileHover={{ x: 3 }}
-                    >
-                      Logout
-                    </motion.button>
-                  </div>
-                </motion.div>
-              </div>
+                  )}
+                  
+                  <motion.button
+                    onClick={() => {
+                      logout();
+                      setProfileDropdownOpen(false);
+                    }}
+                    className="px-4 py-2 text-sm text-left text-red-600 transition-colors rounded-md hover:bg-red-50"
+                    whileHover={{ x: 3 }}
+                  >
+                    Logout
+                  </motion.button>
+                </div>
+              </motion.div>
             </div>
           )}
         </div>

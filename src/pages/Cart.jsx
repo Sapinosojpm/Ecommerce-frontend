@@ -267,13 +267,13 @@ const Cart = () => {
                                   </span>
                                 </div>
 
-                                <div className="flex gap-1 mt-1 text-sm font-semibold">
+                                {/* <div className="flex gap-1 mt-1 text-sm font-semibold">
                                   <span className="text-gray-700">Price Adjustment:</span>
                                   <span>
                                     {currency}
                                     {(variationData.priceAdjustment || 0).toLocaleString()}
                                   </span>
-                                </div>
+                                </div> */}
 
                                 <div className="flex gap-1 mt-1">
                                   <span className="text-gray-600">Stock:</span>
