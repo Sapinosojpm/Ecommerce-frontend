@@ -688,8 +688,18 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
       }
     } catch (error) {
       console.error("Error fetching cart:", error);
+      console.log("Initial cart load:", {
+        token: localStorage.getItem("token"),
+        cartItems: cartItems,
+        products: products.length
+      });
     }
   };
+  useEffect(() => {
+    if (!token) {
+      localStorage.setItem("cartItems", JSON.stringify(cartItems));
+    }
+  }, [cartItems, token]);
 
   // Initial data loading
   useEffect(() => {
