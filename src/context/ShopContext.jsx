@@ -210,17 +210,23 @@ const ShopContextProvider = (props) => {
   };
 
   const [products, setProducts] = useState([]);
-  const [token, setToken] = useState("");
+  // Initialize token from localStorage immediately
+const [token, setToken] = useState(localStorage.getItem("token") || "");
   const navigate = useNavigate();
-
   const [cartItems, setCartItems] = useState(() => {
-    // Only use localStorage cart if user is not logged in
-    if (!token) {
-      const savedCart = JSON.parse(localStorage.getItem("cartItems"));
-      return savedCart || {};
+    const savedToken = localStorage.getItem("token");
+    if (!savedToken) {
+      const savedCart = JSON.parse(localStorage.getItem("cartItems") || "{}");
+      return savedCart;
     }
-    return {}; // Start with empty cart if logged in (will be populated by API)
+    return {}; // Will be populated by getUserCart
   });
+  useEffect(() => {
+    const savedToken = localStorage.getItem("token");
+    if (savedToken) {
+      getUserCart(savedToken);
+    }
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("role", role);
@@ -659,26 +665,29 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
       
       const response = await axios.post(
         `${backendUrl}/api/cart/get`,
-        { userId }, // Explicitly send userId in body
+        { userId },
         { 
           headers: { 
-            Authorization: `Bearer ${userToken}` // Standard auth header
+            Authorization: `Bearer ${userToken}` 
           } 
         }
       );
   
       if (response.data.success) {
-        setCartItems(response.data.cartData || {});
-      } else {
-        toast.error(response.data.message || "Failed to load cart");
+        // Normalize the cart data structure
+        const normalizedCart = {};
+        Object.entries(response.data.cartData || {}).forEach(([key, item]) => {
+          normalizedCart[item.itemId] = {
+            quantity: item.quantity,
+            variations: item.variations || null,
+            variationAdjustment: item.variationAdjustment || 0,
+            finalPrice: item.finalPrice || 0
+          };
+        });
+        setCartItems(normalizedCart);
       }
     } catch (error) {
-      console.error("Error fetching cart:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message
-      });
-      toast.error("Failed to load cart data.");
+      console.error("Error fetching cart:", error);
     }
   };
 
@@ -686,6 +695,7 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   useEffect(() => {
     getProductsData();
   }, []);
+  
 
   // Check token and load user cart
   useEffect(() => {
