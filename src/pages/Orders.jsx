@@ -168,19 +168,17 @@ const Orders = () => {
                           -{item.discount || 0}%
                         </span>
                       </p>
-                      {item.variations && (
-                        <p className="mt-2">
-                          Variation:{" "}
-                          <span className="text-green-500">
-                            {Object.entries(item.variations).map(
-                              ([key, details]) => (
-                                <span key={key}>
-                                  {key} - {details.name}
-                                </span>
-                              )
-                            )}
-                          </span>
-                        </p>
+                      {item.variationDetails && item.variationDetails.length > 0 && (
+                        <div className="mt-2">
+                          Variation:
+                          <ul className="text-green-500 list-disc list-inside">
+                            {item.variationDetails.map((variation, idx) => (
+                              <li key={idx}>
+                                {variation.variationName} - {variation.optionName} (+₱{variation.priceAdjustment})
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       )}
 
                       <p className="mt-2">

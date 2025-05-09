@@ -2,6 +2,8 @@ import { createContext, useEffect, useState, useMemo } from "react";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+// Add missing import for socket.io-client
+import { io } from "socket.io-client";
 
 export const ShopContext = createContext();
 
@@ -19,6 +21,11 @@ const ShopContextProvider = (props) => {
   const [youtubeUrl, setYoutubeUrl] = useState(""); // Store YouTube URL
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [weight, setWeight] = useState(0);
+  // Add missing user state
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user") || "{}"));
+  // Add socket state
+  const [socket, setSocket] = useState(null);
+  
   // get cards
   const [cards, setCards] = useState([]); // Add state for cards
   const [memberCards, setMemberCards] = useState([]); // ✅ Ensure it's an array
@@ -124,11 +131,6 @@ const ShopContextProvider = (props) => {
     fetchRegions();
   }, []);
 
-  // const [cartItems, setCartItems] = useState(() => {
-  //   const savedCart = JSON.parse(localStorage.getItem("cartItems"));
-  //   return savedCart || {};
-  // });
-
   const applyVoucher = (discountPercent, voucherData = {}) => {
     setVoucherDiscount(discountPercent);
     setVoucherAmountDiscount({
@@ -211,7 +213,7 @@ const ShopContextProvider = (props) => {
 
   const [products, setProducts] = useState([]);
   // Initialize token from localStorage immediately
-const [token, setToken] = useState(localStorage.getItem("token") || "");
+  const [token, setToken] = useState(localStorage.getItem("token") || "");
   const navigate = useNavigate();
   const [cartItems, setCartItems] = useState(() => {
     const savedToken = localStorage.getItem("token");
@@ -221,6 +223,7 @@ const [token, setToken] = useState(localStorage.getItem("token") || "");
     }
     return {}; // Will be populated by getUserCart
   });
+  
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
     if (savedToken) {
@@ -263,6 +266,28 @@ const [token, setToken] = useState(localStorage.getItem("token") || "");
   useEffect(() => {
     console.log("📦 Total Cart Weight Updated:", weight);
   }, [weight]);
+
+  // Initialize socket connection
+  useEffect(() => {
+    if (backendUrl) {
+      const socketInstance = io(backendUrl);
+      setSocket(socketInstance);
+      
+      // Setup socket listeners
+      socketInstance.on('productUpdated', (updatedProduct) => {
+        setProducts(prevProducts => 
+          prevProducts.map(product => 
+            product._id === updatedProduct._id ? updatedProduct : product
+          )
+        );
+      });
+      
+      // Cleanup on component unmount
+      return () => {
+        socketInstance.disconnect();
+      };
+    }
+  }, [backendUrl]);
 
   // Add product to cart
   const addToCart = async (itemId, quantity, variations = null) => {
@@ -352,7 +377,7 @@ const [token, setToken] = useState(localStorage.getItem("token") || "");
             variationAdjustment,
             finalPrice: itemInfo.price + variationAdjustment,
           },
-          { headers: { token } }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       } catch (error) {
         console.error("Failed to update cart in the database:", error);
@@ -362,19 +387,20 @@ const [token, setToken] = useState(localStorage.getItem("token") || "");
       }
     }
   };
+  
   useEffect(() => {
-  if (!token && localStorage.getItem("token")) {
-    const savedToken = localStorage.getItem("token");
-    setToken(savedToken);
-    getUserCart(savedToken);
-  }
-}, [token]);
+    if (!token && localStorage.getItem("token")) {
+      const savedToken = localStorage.getItem("token");
+      setToken(savedToken);
+      getUserCart(savedToken);
+    }
+  }, [token]);
 
-
-console.log("Using backend URL:", backendUrl); // Add this to verify the URL
-  // New buyNow function
+  console.log("Using backend URL:", backendUrl); // Add this to verify the URL
+  
+  // New buyNow function - Fixed undefined itemId issue
   const buyNow = async (productId, quantity, variations = null) => {
-    console.log("Buy now :", { itemId, quantity, variations });
+    console.log("Buy now :", { productId, quantity, variations }); // Fixed reference to productId
     if (quantity <= 0) {
       toast.error("Quantity must be greater than 0");
       return;
@@ -397,7 +423,7 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
         await axios.post(
           `${backendUrl}/api/cart/clear`,
           {},
-          { headers: { token } }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
 
         // Add the single item
@@ -408,7 +434,7 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
             quantity,
             variations,
           },
-          { headers: { token } }
+          { headers: { Authorization: `Bearer ${token}` } }
         );
       } catch (error) {
         console.error("Error updating cart:", error);
@@ -482,83 +508,76 @@ console.log("Using backend URL:", backendUrl); // Add this to verify the URL
     console.log("Member Cards Data1:", memberCards); // Debugging Log
   }, []);
 
-  // Update cart quantity
- // In the updateQuantity function, add proper error handling and state update
-// In your ShopContext provider
-const updateQuantity = async (itemId, newQuantity) => {
-  try {
-    const savedToken = localStorage.getItem("token");
-    if (!savedToken) {
-      toast.error("You need to be logged in to update cart.");
-      return false;
-    }
-
-    const response = await fetch(`${backendUrl}/api/cart/update`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${savedToken}`,
-      },
-      body: JSON.stringify({ itemId, quantity: newQuantity }),
-    });
-
-    const data = await response.json();
-    if (data.success) {
-      setCartItems((prev) => ({
-        ...prev,
-        [itemId]: {
-          ...prev[itemId],
-          quantity: newQuantity,
-        },
-      }));
-      
-      // Emit cart update to server
-      if (socket) {
-        socket.emit('cart-update', { userId: user._id });
+  // Fixed updateQuantity function with proper error handling and consistent API authentication
+  const updateQuantity = async (itemId, newQuantity) => {
+    try {
+      if (!token) {
+        toast.error("You need to be logged in to update cart.");
+        return false;
       }
-      
-      return true;
-    } else {
-      toast.error(data.message || "Failed to update cart.");
+
+      const response = await axios.put(
+        `${backendUrl}/api/cart/update`,
+        { itemId, quantity: newQuantity },
+        { headers: { Authorization: `Bearer ${token}` }}
+      );
+
+      if (response.data.success) {
+        setCartItems((prev) => ({
+          ...prev,
+          [itemId]: {
+            ...prev[itemId],
+            quantity: newQuantity,
+          },
+        }));
+        
+        // Emit cart update to server if socket is connected
+        if (socket && user && user._id) {
+          socket.emit('cart-update', { userId: user._id });
+        }
+        
+        return true;
+      } else {
+        toast.error(response.data.message || "Failed to update cart.");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error updating cart:", error);
+      toast.error("Something went wrong. Please try again.");
       return false;
     }
-  } catch (error) {
-    console.error("Error updating cart:", error);
-    toast.error("Something went wrong. Please try again.");
-    return false;
-  }
-};
- // New removeFromCart function
- const removeFromCart = async (itemId) => {
-  try {
-    const updatedCart = { ...cartItems };
-    delete updatedCart[itemId];
-    
-    // Update local state immediately
-    setCartItems(updatedCart);
+  };
 
-    // If user is logged in, sync with backend
-    if (token) {
-      await axios.post(
-        `${backendUrl}/api/cart/remove`,
-        { itemId },
-        { headers: { token } }
-      );
+  // New removeFromCart function with consistent authentication header
+  const removeFromCart = async (itemId) => {
+    try {
+      const updatedCart = { ...cartItems };
+      delete updatedCart[itemId];
+      
+      // Update local state immediately
+      setCartItems(updatedCart);
+
+      // If user is logged in, sync with backend
+      if (token) {
+        await axios.post(
+          `${backendUrl}/api/cart/remove`,
+          { itemId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+      }
+
+      toast.success("Item removed from cart");
+      return true;
+    } catch (error) {
+      console.error("Error removing item:", error);
+      toast.error("Failed to remove item");
+      // Revert to previous state on error
+      setCartItems(cartItems);
+      return false;
     }
-
-    toast.success("Item removed from cart");
-    return true;
-  } catch (error) {
-    console.error("Error removing item:", error);
-    toast.error("Failed to remove item");
-    // Revert to previous state on error
-    setCartItems(cartItems);
-    return false;
-  }
-};
+  };
 
   // Get cart count
-  // In your ShopContext.js or wherever getCartCount is defined
   const getCartCount = () => {
     if (!cartItems || typeof cartItems !== "object") return 0;
 
@@ -570,9 +589,6 @@ const updateQuantity = async (itemId, newQuantity) => {
       return total + (item?.quantity || 0);
     }, 0);
   };
-
-  // // Get wishlist count
-  // const getWishlistCount = () => wishlist.length;
 
   // Optimize product lookup
   const productDict = useMemo(() => {
@@ -586,14 +602,7 @@ const updateQuantity = async (itemId, newQuantity) => {
     console.log("📦 Updated Total Weight:", weight);
   }, [weight]);
 
-  useEffect(() => {
-    const { totalWeight } = getCartAmount(); // Kunin lang ang weight
-    setWeight(totalWeight); // ✅ Set weight after render
-    console.log("🛒 Updated Cart Items:", cartItems);
-  }, [cartItems]); // Tumakbo kapag nagbago ang cartItems
-
-  // Get cart total amount, including delivery fee and discount
-  // Updated getCartAmount to include variations
+  // Fixed getCartAmount to return the totalWeight properly
   const getCartAmount = () => {
     let totalAmount = 0;
     let totalWeight = 0;
@@ -653,24 +662,25 @@ const updateQuantity = async (itemId, newQuantity) => {
     console.log("📦 Total Weight:", totalWeight);
     console.log("💰 Total Amount:", totalAmount);
 
-    return totalAmount;
+    // Return both amount and totalWeight
+    return { amount: totalAmount, totalWeight };
   };
 
+  // Update this useEffect to handle the new return format from getCartAmount
   useEffect(() => {
-    const { totalWeight } = getCartAmount();
-    setWeight(totalWeight);
+    const result = getCartAmount();
+    setWeight(result.totalWeight);
   }, [cartItems, productDict]);
 
   const clearCart = async () => {
-    const savedToken = localStorage.getItem("token");
-    if (!savedToken) {
+    if (!token) {
       toast.error("You need to be logged in to clear the cart.");
       return;
     }
 
     try {
       const response = await axios.delete(`${backendUrl}/api/cart/clear`, {
-        headers: { Authorization: `Bearer ${savedToken}` }, // ✅ Ensure Bearer token format
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.data.success) {
@@ -693,7 +703,6 @@ const updateQuantity = async (itemId, newQuantity) => {
   };
 
   // Fetch products data
-  // ShopContext.jsx
   const getProductsData = async () => {
     try {
       const response = await axios.get(`${backendUrl}/api/product/list`);
@@ -722,7 +731,8 @@ const updateQuantity = async (itemId, newQuantity) => {
       return null;
     }
   };
-  // Fetch user cart data
+  
+  // Fetch user cart data with consistent authorization header
   const getUserCart = async (userToken) => {
     try {
       const userId = localStorage.getItem("userId");
@@ -750,30 +760,16 @@ const updateQuantity = async (itemId, newQuantity) => {
     } catch (error) {
       console.error("Error fetching cart:", error);
       // Fallback to localStorage if available
-      const savedCart = JSON.parse(localStorage.getItem("cartItems") || {});
+      const savedCart = JSON.parse(localStorage.getItem("cartItems") || "{}");
       setCartItems(savedCart);
     }
   };
+  
   useEffect(() => {
     if (!token) {
       localStorage.setItem("cartItems", JSON.stringify(cartItems));
     }
   }, [cartItems, token]);
-
-  // Initial data loading
-  useEffect(() => {
-    getProductsData();
-  }, []);
-  
-
-  // Check token and load user cart
-  useEffect(() => {
-    if (!token && localStorage.getItem("token")) {
-      const savedToken = localStorage.getItem("token");
-      setToken(savedToken);
-      getUserCart(savedToken);
-    }
-  }, [token]);
 
   // Context value
   const contextValue = {
@@ -792,29 +788,28 @@ const updateQuantity = async (itemId, newQuantity) => {
     buyNow,
     setCartItems,
     getCartCount,
-    // getWishlistCount,
     updateQuantity,
     navigate,
     backendUrl,
     setToken,
     token,
-    clearCart, // Include the clearCart function here
-    cards, // Provide the cards data in context
+    clearCart,
+    cards,
     setCards,
     intros,
     setIntros,
     removeFromCart,
     fetchProduct,
     setMemberCards,
-    getCartAmount, // ✅ Use memoized total
-    memberCards, // Provide the cards data in context
+    getCartAmount: () => getCartAmount().amount, // For backward compatibility 
+    memberCards,
     youtubeUrl,
     setYoutubeUrl,
     discountCode,
     discountPercent,
     getDiscountAmount,
     getTotalAmount,
-    role,
+    role, 
     setRole,
     applyDiscount,
     applyVoucher,
@@ -823,6 +818,8 @@ const updateQuantity = async (itemId, newQuantity) => {
     buyNowItem,
     setBuyNowItem,
     handleBuyNow,
+    user,
+    setUser,
   };
 
   return (

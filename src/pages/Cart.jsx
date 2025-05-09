@@ -11,7 +11,6 @@ import { assets } from "../assets/assets";
 import { Link } from "react-router-dom";
 import Lenis from "lenis";
 import { toast } from "react-toastify";
-import { io } from "socket.io-client";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -24,81 +23,12 @@ const Cart = () => {
     navigate,
     removeFromCart,
     clearCart,
-    user,
   } = useContext(ShopContext);
 
   const [cartData, setCartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [deletingItem, setDeletingItem] = useState(null);
-  const [socket, setSocket] = useState(null);
 
-  // Initialize WebSocket connection
-  useEffect(() => {
-    const newSocket = io(backendUrl, {
-      withCredentials: true,
-      transports: ['websocket'],
-    });
-    
-    setSocket(newSocket);
-
-    return () => {
-      if (newSocket) newSocket.disconnect();
-    };
-  }, []);
-
-  // Join cart room and listen for updates
-  useEffect(() => {
-    if (socket && user?._id) {
-      socket.emit('join-cart-room', user._id);
-      
-      socket.on('cart-updated', (updatedCart) => {
-        // Update local cart state when server sends updates
-        const tempData = [];
-        for (const itemId in updatedCart) {
-          const item = updatedCart[itemId];
-          const product = products.find((p) => p._id === itemId);
-
-          if (product && item.quantity > 0) {
-            let availableStock = product.quantity;
-
-            if (item.variations && product.variations?.length > 0) {
-              const variationQuantities = Object.entries(item.variations).map(
-                ([varName, varData]) => {
-                  const variation = product.variations.find(
-                    (v) => v.name === varName
-                  );
-                  if (!variation) return 0;
-
-                  const option = variation.options.find(
-                    (o) => o.name === varData.name
-                  );
-                  return option?.quantity || 0;
-                }
-              );
-
-              availableStock = Math.min(...variationQuantities);
-            }
-
-            tempData.push({
-              _id: itemId,
-              quantity: item.quantity,
-              variations: item.variations || null,
-              productData: product,
-              availableStock,
-            });
-          }
-        }
-        setCartData(tempData);
-      });
-    }
-
-    return () => {
-      if (socket) {
-        socket.off('cart-updated');
-      }
-    };
-  }, [socket, user, products]);
-  
   useLayoutEffect(() => {
     const lenis = new Lenis({
       smooth: true,
