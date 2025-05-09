@@ -192,13 +192,13 @@ const Product = () => {
 
   const updateAvailableQuantity = (selections) => {
     if (!productData) return 0;
-  
+
     if (!productData.variations || productData.variations.length === 0) {
       const qty = productData.quantity || 0;
       setAvailableQuantity(qty);
       return qty;
     }
-  
+
     let minQuantity = Infinity;
     Object.entries(selections).forEach(([variationName, selectedOption]) => {
       const variation = productData.variations.find(
@@ -213,7 +213,7 @@ const Product = () => {
         }
       }
     });
-  
+
     const finalQty = minQuantity === Infinity ? 0 : minQuantity;
     setAvailableQuantity(finalQty);
     return finalQty;
@@ -247,7 +247,9 @@ const Product = () => {
         const initialSelections = {};
         foundProduct.variations.forEach((variation) => {
           if (variation.options.length > 0) {
-            const firstInStockOption = variation.options.find(opt => opt.quantity > 0) || variation.options[0];
+            const firstInStockOption =
+              variation.options.find((opt) => opt.quantity > 0) ||
+              variation.options[0];
             initialSelections[variation.name] = firstInStockOption;
           }
         });
@@ -269,7 +271,9 @@ const Product = () => {
           const initialSelections = {};
           data.variations.forEach((variation) => {
             if (variation.options.length > 0) {
-              const firstInStockOption = variation.options.find(opt => opt.quantity > 0) || variation.options[0];
+              const firstInStockOption =
+                variation.options.find((opt) => opt.quantity > 0) ||
+                variation.options[0];
               initialSelections[variation.name] = firstInStockOption;
             }
           });
@@ -308,8 +312,13 @@ const Product = () => {
         if (productData) {
           const validSelections = {};
           Object.entries(parsed).forEach(([name, option]) => {
-            const variation = productData.variations?.find(v => v.name === name);
-            if (variation && variation.options.some(opt => opt.name === option.name)) {
+            const variation = productData.variations?.find(
+              (v) => v.name === name
+            );
+            if (
+              variation &&
+              variation.options.some((opt) => opt.name === option.name)
+            ) {
               validSelections[name] = option;
             }
           });
@@ -358,16 +367,18 @@ const Product = () => {
 
   const getDefaultVariations = () => {
     if (!productData?.variations?.length) return null;
-    
+
     const defaultVariations = {};
-    productData.variations.forEach(variation => {
+    productData.variations.forEach((variation) => {
       if (variation.options.length > 0) {
         // Find first in-stock option or fall back to first option
-        const firstInStock = variation.options.find(opt => opt.quantity > 0) || variation.options[0];
+        const firstInStock =
+          variation.options.find((opt) => opt.quantity > 0) ||
+          variation.options[0];
         defaultVariations[variation.name] = firstInStock;
       }
     });
-    
+
     return Object.keys(defaultVariations).length > 0 ? defaultVariations : null;
   };
 
@@ -494,11 +505,14 @@ const Product = () => {
                               updateAvailableQuantity(newSelection);
                             }}
                             className={`px-4 py-2 text-sm border rounded-full transition-colors ${
-                              selectedVariations[activeVariationName]?.name === option.name
+                              selectedVariations[activeVariationName]?.name ===
+                              option.name
                                 ? "bg-blue-600 text-white border-blue-600"
                                 : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
                             } ${
-                              option.quantity <= 0 ? "opacity-50 cursor-not-allowed" : ""
+                              option.quantity <= 0
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
                             }`}
                             disabled={option.quantity <= 0}
                           >
@@ -553,17 +567,14 @@ const Product = () => {
                           addToCart(
                             productData._id,
                             quantity,
-                            Object.keys(selectedVariations).length > 0 
-                              ? selectedVariations 
-                              : null,
-                            finalPrice
+                            Object.keys(selectedVariations).length > 0
+                              ? selectedVariations
+                              : null
                           );
-                          toast.success("Product added to cart successfully!");
                         }}
                         icon={<FaShoppingCart className="w-6 h-6 text-white" />}
                         disabled={selectedVariationQuantity === 0}
                       />
-
                       <AnimatedButton
                         text="BUY NOW"
                         successText="Redirecting..."
@@ -571,8 +582,8 @@ const Product = () => {
                           handleBuyNow(
                             productData._id,
                             quantity,
-                            Object.keys(selectedVariations).length > 0 
-                              ? selectedVariations 
+                            Object.keys(selectedVariations).length > 0
+                              ? selectedVariations
                               : null,
                             finalPrice,
                             calculatePrice

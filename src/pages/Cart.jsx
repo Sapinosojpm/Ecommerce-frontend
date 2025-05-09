@@ -49,14 +49,18 @@ const Cart = () => {
         
         if (product && item.quantity > 0) {
           let availableStock = product.quantity;
+          
+          // Calculate available stock based on variations if they exist
           if (item.variations && product.variations?.length > 0) {
-            availableStock = Math.min(
-              ...Object.entries(item.variations).map(([varName, varData]) => {
-                const variation = product.variations.find(v => v.name === varName);
-                const option = variation?.options.find(o => o.name === varData.name);
-                return option?.quantity || 0;
-              })
-            );
+            const variationQuantities = Object.entries(item.variations).map(([varName, varData]) => {
+              const variation = product.variations.find(v => v.name === varName);
+              if (!variation) return 0;
+              
+              const option = variation.options.find(o => o.name === varData.name);
+              return option?.quantity || 0;
+            });
+            
+            availableStock = Math.min(...variationQuantities);
           }
 
           tempData.push({
@@ -91,9 +95,10 @@ const Cart = () => {
 
       let variationAdjustment = 0;
       if (item.variations) {
-        for (const variation of Object.values(item.variations)) {
-          variationAdjustment += variation.priceAdjustment || 0;
-        }
+        variationAdjustment = Object.values(item.variations).reduce(
+          (sum, variation) => sum + (variation.priceAdjustment || 0),
+          0
+        );
       }
 
       const finalItemPrice = basePrice + variationAdjustment;
@@ -130,37 +135,34 @@ const Cart = () => {
     }
   };
 
-// Updated handleDeleteItem function
-const handleDeleteItem = async (itemId) => {
-  setDeletingItem(itemId);
-  try {
-    const success = await removeFromCart(itemId);
-    if (success) {
-      // Update local cartData state immediately
-      setCartData(prev => prev.filter(item => item._id !== itemId));
+  const handleDeleteItem = async (itemId) => {
+    setDeletingItem(itemId);
+    try {
+      const success = await removeFromCart(itemId);
+      if (success) {
+        setCartData(prev => prev.filter(item => item._id !== itemId));
+      }
+    } catch (error) {
+      toast.error("Failed to remove item");
+    } finally {
+      setDeletingItem(null);
     }
-  } catch (error) {
-    toast.error("Failed to remove item");
-  } finally {
-    setDeletingItem(null);
-  }
-};
+  };
 
-// Updated handleQuantityChange function
-const handleQuantityChange = (itemId, newQuantity) => {
-  if (newQuantity <= 0) {
-    handleDeleteItem(itemId);
-    return;
-  }
+  const handleQuantityChange = (itemId, newQuantity) => {
+    if (newQuantity <= 0) {
+      handleDeleteItem(itemId);
+      return;
+    }
 
-  const cartItem = cartData.find(item => item._id === itemId);
-  if (cartItem && newQuantity > cartItem.availableStock) {
-    toast.error(`Only ${cartItem.availableStock} available in stock`);
-    return;
-  }
+    const cartItem = cartData.find(item => item._id === itemId);
+    if (cartItem && newQuantity > cartItem.availableStock) {
+      toast.error(`Only ${cartItem.availableStock} available in stock`);
+      return;
+    }
 
-  updateQuantity(itemId, newQuantity);
-};
+    updateQuantity(itemId, newQuantity);
+  };
 
   if (loading) {
     return (
@@ -211,9 +213,10 @@ const handleQuantityChange = (itemId, newQuantity) => {
 
             let variationAdjustment = 0;
             if (item.variations) {
-              for (const variation of Object.values(item.variations)) {
-                variationAdjustment += variation.priceAdjustment || 0;
-              }
+              variationAdjustment = Object.values(item.variations).reduce(
+                (sum, variation) => sum + (variation.priceAdjustment || 0),
+                0
+              );
             }
 
             const finalPrice = basePrice + variationAdjustment;
@@ -249,50 +252,61 @@ const handleQuantityChange = (itemId, newQuantity) => {
                       </p>
                     </div>
 
-                    {item.variations && (
-                      <div className="mt-2 space-y-2">
-                        {Object.entries(item.variations).map(
-                          ([variationType, variationData]) => {
-                            const variation = productData.variations?.find(
-                              v => v.name === variationType
-                            );
-                            const option = variation?.options.find(
-                              o => o.name === variationData.name
-                            );
-                            const optionQuantity = option?.quantity || 0;
+{item.variations && (
+  <div className="mt-2 space-y-2">
+    {Object.entries(item.variations).map(
+      ([variationType, variationData]) => {
+        // Only show the variation if it's actually selected
+        if (variationData && variationData.name) {
+          const variation = productData.variations?.find(
+            v => v.name === variationType
+          );
+          const option = variation?.options.find(
+            o => o.name === variationData.name
+          );
+          const optionQuantity = option?.quantity || 0;
 
-                            return (
-                              <div
-                                key={variationType}
-                                className="pl-3 text-sm border-l-2 border-gray-200"
-                              >
-                                <div className="flex gap-1">
-                                  <span className="font-medium capitalize">
-                                    {variationType}:
-                                  </span>
-                                  <span className="text-gray-700">
-                                    {variationData.name}
-                                  </span>
-                                </div>
+          return (
+            <div
+              key={variationType}
+              className="pl-3 text-sm border-l-2 border-gray-200"
+            >
+              <div className="flex gap-1">
+                <span className="font-medium capitalize">
+                  {variationType}:
+                </span>
+                <span className="text-gray-700">
+                  {variationData.name}
+                  {variationData.priceAdjustment ? (
+                    <span className="ml-1 text-xs text-gray-500">
+                      ({variationData.priceAdjustment > 0 ? '+' : ''}
+                      {currency}
+                      {Math.abs(variationData.priceAdjustment).toLocaleString()})
+                    </span>
+                  ) : null}
+                </span>
+              </div>
 
-                                <div className="flex gap-1 mt-1">
-                                  <span className="text-gray-600">Stock:</span>
-                                  <span
-                                    className={
-                                      optionQuantity > 0
-                                        ? "text-green-600"
-                                        : "text-red-600"
-                                    }
-                                  >
-                                    {optionQuantity} available
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          }
-                        )}
-                      </div>
-                    )}
+              <div className="flex gap-1 mt-1">
+                <span className="text-gray-600">Stock:</span>
+                <span
+                  className={
+                    optionQuantity > 0
+                      ? "text-green-600"
+                      : "text-red-600"
+                  }
+                >
+                  {optionQuantity} available
+                </span>
+              </div>
+            </div>
+          );
+        }
+        return null;
+      }
+    )}
+  </div>
+)}
                   </div>
                 </div>
 

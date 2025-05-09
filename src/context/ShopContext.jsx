@@ -274,26 +274,35 @@ const [token, setToken] = useState(localStorage.getItem("token") || "");
       return;
     }
   
-    // Validate variations
+    // Validate variations and check stock - only include the selected variation
     const selectedVariations = {};
-    if (variations) {
-      for (const [variationName, option] of Object.entries(variations)) {
-        const productVariation = itemInfo.variations.find(v => v.name === variationName);
+    if (variations && Object.keys(variations).length > 0) {
+      // Get the active variation name (the one the user selected last)
+      const activeVariationName = Object.keys(variations)[0]; // Assuming only one variation is active
+      
+      if (variations[activeVariationName]) {
+        const productVariation = itemInfo.variations.find(v => v.name === activeVariationName);
         if (!productVariation) {
-          toast.error(`Variation ${variationName} not found for this product`);
+          toast.error(`Variation ${activeVariationName} not found for this product`);
           return;
         }
         
-        const validOption = productVariation.options.find(o => o.name === option.name);
+        const validOption = productVariation.options.find(o => o.name === variations[activeVariationName].name);
         if (!validOption) {
-          toast.error(`Invalid option ${option.name} for variation ${variationName}`);
+          toast.error(`Invalid option ${variations[activeVariationName].name} for variation ${activeVariationName}`);
           return;
         }
         
-        selectedVariations[variationName] = {
-          name: option.name,
-          priceAdjustment: option.priceAdjustment || 0,
-          quantity: option.quantity || 0,
+        // Check if option is in stock
+        if (validOption.quantity <= 0) {
+          toast.error(`Option ${validOption.name} for ${activeVariationName} is out of stock`);
+          return;
+        }
+        
+        // Only include the selected variation
+        selectedVariations[activeVariationName] = {
+          name: validOption.name,
+          priceAdjustment: validOption.priceAdjustment || 0,
         };
       }
     }
@@ -304,11 +313,24 @@ const [token, setToken] = useState(localStorage.getItem("token") || "");
       0
     );
   
+    // Check if same item with same variations already exists in cart
+    const existingCartItem = cartItems[itemId];
+    let newQuantity = quantity;
+    
+    if (existingCartItem) {
+      // Compare variations
+      const variationsMatch = JSON.stringify(existingCartItem.variations) === JSON.stringify(selectedVariations);
+      
+      if (variationsMatch) {
+        newQuantity = existingCartItem.quantity + quantity;
+      }
+    }
+  
     // Update cart in local state
     const updatedCart = {
       ...cartItems,
       [itemId]: {
-        quantity,
+        quantity: newQuantity,
         variations: selectedVariations,
         variationAdjustment,
         finalPrice: itemInfo.price + variationAdjustment
@@ -316,24 +338,22 @@ const [token, setToken] = useState(localStorage.getItem("token") || "");
     };
   
     setCartItems(updatedCart);
-
+  
     // If user is logged in (token available), update cart in the backend
     if (token) {
       try {
-        // Send complete item data to backend
         await axios.post(
           `${backendUrl}/api/cart/add`,
           {
             userId: localStorage.getItem("userId"),
             itemId,
-            quantity,
-            variations,
+            quantity: newQuantity,
+            variations: selectedVariations,
             variationAdjustment,
             finalPrice: itemInfo.price + variationAdjustment,
           },
           { headers: { token } }
         );
-        toast.success("Item added to cart");
       } catch (error) {
         console.error("Failed to update cart in the database:", error);
         toast.error("Failed to update the cart. Please try again.");
@@ -349,6 +369,8 @@ const [token, setToken] = useState(localStorage.getItem("token") || "");
     getUserCart(savedToken);
   }
 }, [token]);
+
+
 console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   // New buyNow function
   const buyNow = async (productId, quantity, variations = null) => {
