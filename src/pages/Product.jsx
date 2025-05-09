@@ -13,12 +13,12 @@ import Lenis from "@studio-freight/lenis";
 import { Lens } from "../components/Lens";
 import Review from "../components/ProductReview";
 import ProductAdsDisplay from "../components/ProductsAdsDisplay";
-import { useSocket } from "../context/SocketContext"; // Add this import
+import { useSocket } from "../context/SocketContext";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const Product = () => {
-  const socket = useSocket(); // Get the socket instance
+  const socket = useSocket();
   const { productId } = useParams();
   const { products, currency, addToCart, fetchProduct, handleBuyNow } =
     useContext(ShopContext);
@@ -35,20 +35,17 @@ const Product = () => {
   const [selectedVariations, setSelectedVariations] = useState({});
   const [finalPrice, setFinalPrice] = useState(0);
   const [availableQuantity, setAvailableQuantity] = useState(0);
-// Add this state above your component
-const [activeVariationName, setActiveVariationName] = useState(null);
-
+  const [activeVariationName, setActiveVariationName] = useState(null);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   useEffect(() => {
-    const interval = setInterval(refreshProductData, 30000); // Refresh every 3 seconds
+    const interval = setInterval(refreshProductData, 30000);
     return () => clearInterval(interval);
   }, [productId]);
 
-  // In Product.jsx
   useEffect(() => {
     if (!socket || !productId) return;
 
@@ -58,7 +55,6 @@ const [activeVariationName, setActiveVariationName] = useState(null);
       if (updatedProduct._id === productId) {
         setProductData(updatedProduct);
 
-        // Preserve current selections if they still exist in the updated product
         const newSelections = {};
         let hasValidSelections = false;
 
@@ -75,11 +71,9 @@ const [activeVariationName, setActiveVariationName] = useState(null);
           }
         });
 
-        // Only update selections if they're still valid
         if (hasValidSelections) {
           setSelectedVariations(newSelections);
         } else if (updatedProduct.variations?.length > 0) {
-          // Reset to first option if no valid selections
           const initialSelections = {};
           updatedProduct.variations.forEach((variation) => {
             if (variation.options.length > 0) {
@@ -89,7 +83,6 @@ const [activeVariationName, setActiveVariationName] = useState(null);
           setSelectedVariations(initialSelections);
         }
 
-        // Update quantities and price
         updateAvailableQuantity(hasValidSelections ? newSelections : {});
         calculatePrice(hasValidSelections ? newSelections : {});
 
@@ -106,7 +99,6 @@ const [activeVariationName, setActiveVariationName] = useState(null);
     };
   }, [socket, productId, selectedVariations]);
 
-  // Fetch reviews for the product
   const fetchReviews = async () => {
     try {
       const response = await fetch(
@@ -177,19 +169,13 @@ const [activeVariationName, setActiveVariationName] = useState(null);
 
     let calculatedPrice = productData.price;
 
-    console.log("Base price:", calculatedPrice);
-    console.log("Selected variations:", selections);
-
     Object.values(selections).forEach((option) => {
-      console.log(`Adding price adjustment: ${option.priceAdjustment}`);
       calculatedPrice += option.priceAdjustment || 0;
     });
 
     if (productData.discount > 0) {
       calculatedPrice = calculatedPrice * (1 - productData.discount / 100);
     }
-
-    console.log("Final price after discount:", calculatedPrice);
 
     setFinalPrice(calculatedPrice);
   };
@@ -204,20 +190,15 @@ const [activeVariationName, setActiveVariationName] = useState(null);
     updateAvailableQuantity(newSelections);
   };
 
-  // Update the updateAvailableQuantity function
-  // In Product.jsx
-  // Replace your updateAvailableQuantity function with this:
   const updateAvailableQuantity = (selections) => {
     if (!productData) return 0;
   
-    // If no variations, use main product quantity
     if (!productData.variations || productData.variations.length === 0) {
       const qty = productData.quantity || 0;
       setAvailableQuantity(qty);
       return qty;
     }
   
-    // With variations, find minimum available quantity
     let minQuantity = Infinity;
     Object.entries(selections).forEach(([variationName, selectedOption]) => {
       const variation = productData.variations.find(
@@ -238,14 +219,10 @@ const [activeVariationName, setActiveVariationName] = useState(null);
     return finalQty;
   };
 
-  // Ensure the `selectedVariationQuantity` is being passed correctly to the component
-
-  // In Product.jsx
   const refreshProductData = async () => {
     const data = await fetchProduct(productId);
     if (data) {
       setProductData(data);
-      // Reinitialize selections and quantities
       const initialSelections = {};
       if (data.variations?.length > 0) {
         data.variations.forEach((variation) => {
@@ -253,33 +230,33 @@ const [activeVariationName, setActiveVariationName] = useState(null);
             initialSelections[variation.name] = variation.options[0];
           }
         });
+        setActiveVariationName(data.variations[0].name);
       }
       setSelectedVariations(initialSelections);
       updateAvailableQuantity(initialSelections);
     }
   };
 
-  // Update the fetchProductData function
   const fetchProductData = async () => {
     const foundProduct = products.find((item) => item._id === productId);
     if (foundProduct) {
       setProductData(foundProduct);
       setImage(foundProduct.image[0]);
-      setFinalPrice(foundProduct.price);
 
-      // Initialize variations if they exist
       if (foundProduct.variations?.length > 0) {
         const initialSelections = {};
         foundProduct.variations.forEach((variation) => {
           if (variation.options.length > 0) {
-            initialSelections[variation.name] = variation.options[0];
+            const firstInStockOption = variation.options.find(opt => opt.quantity > 0) || variation.options[0];
+            initialSelections[variation.name] = firstInStockOption;
           }
         });
         setSelectedVariations(initialSelections);
-        const initialQty = updateAvailableQuantity(initialSelections);
-        setAvailableQuantity(initialQty); updateAvailableQuantity(initialSelections);
+        setActiveVariationName(foundProduct.variations[0].name);
+        calculatePrice(initialSelections);
+        updateAvailableQuantity(initialSelections);
       } else {
-        // No variations - use main product quantity
+        setFinalPrice(foundProduct.price);
         setAvailableQuantity(foundProduct.quantity || 0);
       }
     } else {
@@ -287,20 +264,21 @@ const [activeVariationName, setActiveVariationName] = useState(null);
       if (data) {
         setProductData(data);
         setImage(data.image[0]);
-        setFinalPrice(data.price);
 
-        // Initialize variations if they exist
         if (data.variations?.length > 0) {
           const initialSelections = {};
           data.variations.forEach((variation) => {
             if (variation.options.length > 0) {
-              initialSelections[variation.name] = variation.options[0];
+              const firstInStockOption = variation.options.find(opt => opt.quantity > 0) || variation.options[0];
+              initialSelections[variation.name] = firstInStockOption;
             }
           });
           setSelectedVariations(initialSelections);
+          setActiveVariationName(data.variations[0].name);
+          calculatePrice(initialSelections);
           updateAvailableQuantity(initialSelections);
         } else {
-          // No variations - use main product quantity
+          setFinalPrice(data.price);
           setAvailableQuantity(data.quantity || 0);
         }
       }
@@ -311,45 +289,41 @@ const [activeVariationName, setActiveVariationName] = useState(null);
     fetchProductData();
   }, [productId, products]);
 
-  // Save selections to localStorage when they change
-useEffect(() => {
-  if (Object.keys(selectedVariations).length > 0) {
-    localStorage.setItem(
-      `product_${productId}_selections`,
-      JSON.stringify(selectedVariations)
-    );
-  }
-}, [selectedVariations, productId]);
-
-// Load selections from localStorage on mount
-useEffect(() => {
-  const savedSelections = localStorage.getItem(
-    `product_${productId}_selections`
-  );
-  if (savedSelections) {
-    try {
-      const parsed = JSON.parse(savedSelections);
-      // Validate that selections still exist in current product data
-      if (productData) {
-        const validSelections = {};
-        Object.entries(parsed).forEach(([name, option]) => {
-          const variation = productData.variations?.find(v => v.name === name);
-          if (variation && variation.options.some(opt => opt.name === option.name)) {
-            validSelections[name] = option;
-          }
-        });
-        if (Object.keys(validSelections).length > 0) {
-          setSelectedVariations(validSelections);
-          updateAvailableQuantity(validSelections);
-        }
-      }
-    } catch (e) {
-      console.error("Failed to parse saved selections", e);
+  useEffect(() => {
+    if (Object.keys(selectedVariations).length > 0) {
+      localStorage.setItem(
+        `product_${productId}_selections`,
+        JSON.stringify(selectedVariations)
+      );
     }
-  }
-}, [productData, productId]);
+  }, [selectedVariations, productId]);
 
-  // Calculate price when selected variations change
+  useEffect(() => {
+    const savedSelections = localStorage.getItem(
+      `product_${productId}_selections`
+    );
+    if (savedSelections) {
+      try {
+        const parsed = JSON.parse(savedSelections);
+        if (productData) {
+          const validSelections = {};
+          Object.entries(parsed).forEach(([name, option]) => {
+            const variation = productData.variations?.find(v => v.name === name);
+            if (variation && variation.options.some(opt => opt.name === option.name)) {
+              validSelections[name] = option;
+            }
+          });
+          if (Object.keys(validSelections).length > 0) {
+            setSelectedVariations(validSelections);
+            updateAvailableQuantity(validSelections);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to parse saved selections", e);
+      }
+    }
+  }, [productData, productId]);
+
   useEffect(() => {
     if (selectedVariations && productData) {
       calculatePrice(selectedVariations);
@@ -364,9 +338,6 @@ useEffect(() => {
     return <div className="mt-10 text-xl text-center">Loading...</div>;
   }
 
-  console.log("Selected Variations:", selectedVariations);
-  console.log("Product Data:", productData);
-
   const selectedVariationQuantity = Object.entries(selectedVariations).reduce(
     (acc, [variationName, selectedOption]) => {
       const variation = productData.variations.find(
@@ -377,10 +348,6 @@ useEffect(() => {
           (opt) => opt.name === selectedOption.name
         );
         if (selectedOptionData) {
-          console.log(
-            `Adding quantity for ${variationName}:`,
-            selectedOptionData.quantity
-          );
           acc += selectedOptionData.quantity || 0;
         }
       }
@@ -389,16 +356,26 @@ useEffect(() => {
     0
   );
 
-  console.log("Total Quantity:", selectedVariationQuantity);
+  const getDefaultVariations = () => {
+    if (!productData?.variations?.length) return null;
+    
+    const defaultVariations = {};
+    productData.variations.forEach(variation => {
+      if (variation.options.length > 0) {
+        // Find first in-stock option or fall back to first option
+        const firstInStock = variation.options.find(opt => opt.quantity > 0) || variation.options[0];
+        defaultVariations[variation.name] = firstInStock;
+      }
+    });
+    
+    return Object.keys(defaultVariations).length > 0 ? defaultVariations : null;
+  };
 
   return (
     <div className="container px-4 py-12 mx-auto my-20 product-page">
-      {/* Main Product Section */}
       <div className="flex flex-col gap-8 lg:flex-row">
-        {/* Product Images and Info (Left 2/3) */}
         <div className="flex flex-col gap-8 lg:w-2/3">
           <div className="flex flex-col gap-4 sm:flex-row">
-            {/* Thumbnail Images */}
             <div className="flex gap-4 overflow-x-auto sm:flex-col sm:w-1/4">
               {productData.image.map((item, index) => (
                 <motion.img
@@ -406,7 +383,7 @@ useEffect(() => {
                   transition={{ duration: 0.2 }}
                   onClick={() => {
                     setImage(item);
-                    scrollToTop(); // Scroll to top when image is clicked
+                    scrollToTop();
                   }}
                   src={item}
                   key={index}
@@ -416,7 +393,6 @@ useEffect(() => {
               ))}
             </div>
 
-            {/* Main Image with Lens */}
             <div className="z-50 flex items-center justify-center w-full cursor-pointer sm:w-3/4">
               <Lens
                 zoomFactor={3}
@@ -438,7 +414,6 @@ useEffect(() => {
 
           <hr />
 
-          {/* Product Info */}
           <div className="flex-1 mt-8 sm:mt-0">
             <h1 className="mb-3 text-2xl font-semibold text-gray-900">
               {productData.name}
@@ -464,99 +439,78 @@ useEffect(() => {
                   {finalPrice.toFixed(2)}
                 </span>
               )}
-              {/* {Object.values(selectedVariations).some((v) => v.priceAdjustment > 0) && (
-                <div className="mt-2 text-sm text-gray-600">
-                 Includes variation cost:{" "}
-                  {currency}
-                  {Object.values(selectedVariations)
-                    .reduce((sum, opt) => sum + (opt.priceAdjustment || 0), 0)
-                    .toFixed(2)}
-                </div>
-              )} */}
             </div>
 
             {productData.variations?.length > 0 && (
-  <div className="mb-5">
-    <label className="block mb-2 text-lg font-medium">
-      Choose Variation:
-    </label>
-    <div className="flex flex-wrap gap-2">
-      {productData.variations.map((variation) => (
-        <button
-        required
-          key={variation.name}
-          onClick={() => {
-            // Activate only the clicked variation
-            setActiveVariationName(variation.name);
+              <div className="mb-5">
+                <label className="block mb-2 text-lg font-medium">
+                  Choose Variation:
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {productData.variations.map((variation) => (
+                    <button
+                      key={variation.name}
+                      onClick={() => {
+                        setActiveVariationName(variation.name);
+                        if (!selectedVariations[variation.name]) {
+                          const newSelection = {
+                            ...selectedVariations,
+                            [variation.name]: variation.options[0],
+                          };
+                          setSelectedVariations(newSelection);
+                          calculatePrice(newSelection);
+                          updateAvailableQuantity(newSelection);
+                        }
+                      }}
+                      className={`px-4 py-2 text-sm border rounded-full transition-colors ${
+                        activeVariationName === variation.name
+                          ? "bg-black text-white border-black"
+                          : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
+                      }`}
+                    >
+                      {variation.name}
+                    </button>
+                  ))}
+                </div>
 
-            // If this variation was never selected before, default to first option
-            if (!selectedVariations[variation.name]) {
-              const newSelection = {
-                [variation.name]: variation.options[0],
-              };
-              setSelectedVariations(newSelection);
-              calculatePrice(newSelection);
-              updateAvailableQuantity(newSelection);
-            } else {
-              // keep existing selected option but only for this variation
-              const newSelection = {
-                [variation.name]: selectedVariations[variation.name],
-              };
-              setSelectedVariations(newSelection);
-              calculatePrice(newSelection);
-              updateAvailableQuantity(newSelection);
-            }
-          }}
-          className={`px-4 py-2 text-sm border rounded-full transition-colors ${
-            activeVariationName === variation.name
-              ? "bg-black text-white border-black"
-              : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
-          }`}
-        >
-          {variation.name}
-        </button>
-      ))}
-    </div>
+                {activeVariationName && (
+                  <div className="mt-4">
+                    <label className="block mb-2 text-lg font-medium">
+                      Select Option:
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {productData.variations
+                        .find((v) => v.name === activeVariationName)
+                        ?.options.map((option) => (
+                          <button
+                            key={option.name}
+                            onClick={() => {
+                              const newSelection = {
+                                ...selectedVariations,
+                                [activeVariationName]: option,
+                              };
+                              setSelectedVariations(newSelection);
+                              calculatePrice(newSelection);
+                              updateAvailableQuantity(newSelection);
+                            }}
+                            className={`px-4 py-2 text-sm border rounded-full transition-colors ${
+                              selectedVariations[activeVariationName]?.name === option.name
+                                ? "bg-blue-600 text-white border-blue-600"
+                                : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
+                            } ${
+                              option.quantity <= 0 ? "opacity-50 cursor-not-allowed" : ""
+                            }`}
+                            disabled={option.quantity <= 0}
+                          >
+                            {option.name}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
-    {/* Show only selected variation's options */}
-    {activeVariationName && (
-      <div className="mt-4">
-        <label className="block mb-2 text-lg font-medium">
-          Select Option:
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {productData.variations
-            .find((v) => v.name === activeVariationName)
-            ?.options.map((option) => (
-              <button
-                key={option.name}
-                onClick={() => {
-                  const newSelection = {
-                    [activeVariationName]: option,
-                  };
-                  setSelectedVariations(newSelection);
-                  calculatePrice(newSelection);
-                  updateAvailableQuantity(newSelection);
-                }}
-                className={`px-4 py-2 text-sm border rounded-full transition-colors ${
-                  selectedVariations[activeVariationName]?.name === option.name
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
-                } ${
-                  option.quantity <= 0 ? "opacity-50 cursor-not-allowed" : ""
-                }`}
-                disabled={option.quantity <= 0}
-              >
-                {option.name}
-              </button>
-            ))}
-        </div>
-      </div>
-    )}
-  </div>
-)}
-
-            {/* Quantity and Stock */}
             <div className="flex items-center gap-4 mb-4">
               <p className="text-lg font-medium">Available Quantity: </p>
               <span>{selectedVariationQuantity}</span>
@@ -592,40 +546,46 @@ useEffect(() => {
                     </div>
 
                     <div className="flex flex-wrap gap-4">
-                      <AnimatedButton
-                        text="ADD TO CART"
-                        successText="Added!"
-                        onClick={() => {
-                          addToCart(
-                            productData._id,
-                            quantity,
-                            selectedVariations,
-                            finalPrice
-                          );
+                    <AnimatedButton
+  text="ADD TO CART"
+  successText="Added!"
+  onClick={() => {
+    const variationsToUse = Object.keys(selectedVariations).length > 0 
+      ? getDefaultVariations() 
+      : null;
+    
+    addToCart(
+      productData._id,
+      quantity,
+      variationsToUse,
+      finalPrice
+    );
+    toast.success("Product added to cart successfully!");
+  }}
+  icon={<FaShoppingCart className="w-6 h-6 text-white" />}
+  disabled={selectedVariationQuantity === 0}
+/>
 
-                          toast.success("Product added to cart successfully!");
-                        }}
-                        icon={<FaShoppingCart className="w-6 h-6 text-white" />}
-                        disabled={selectedVariationQuantity === 0}
-                      />
-
-                      <AnimatedButton
-                        text="BUY NOW"
-                        successText="Redirecting..."
-                        onClick={() => {
-                          handleBuyNow(
-                            productData._id,
-                            quantity,
-                            selectedVariations,
-                            finalPrice,
-                            calculatePrice
-                          );
-
-                          toast.success("Redirecting to checkout...");
-                        }}
-                        className="bg-blue-600 hover:bg-blue-700"
-                        disabled={availableQuantity === 0}
-                      />
+<AnimatedButton
+  text="BUY NOW"
+  successText="Redirecting..."
+  onClick={() => {
+    const variationsToUse = Object.keys(selectedVariations).length > 0 
+      ? getDefaultVariations() 
+      : null;
+    
+    handleBuyNow(
+      productData._id,
+      quantity,
+      variationsToUse,
+      finalPrice,
+      calculatePrice
+    );
+    toast.success("Redirecting to checkout...");
+  }}
+  className="bg-blue-600 hover:bg-blue-700"
+  disabled={availableQuantity === 0}
+/>
 
                       <WishlistIcon
                         productId={productData._id}
@@ -641,7 +601,6 @@ useEffect(() => {
             )}
           </div>
 
-          {/* Product Description */}
           <div className="mt-8 max-h-[400px] overflow-y-auto">
             <div className="pb-4 border-b">
               <b className="text-lg">Description</b>
@@ -651,7 +610,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Product Review Section */}
           <div className="mt-8">
             <div className="flex items-center justify-between pb-4 border-b">
               <b className="text-xl font-semibold">Customer Reviews</b>
@@ -672,7 +630,6 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Star Rating Percentage */}
             {reviews.length > 0 && (
               <div className="mt-4">
                 {[5, 4, 3, 2, 1].map((star) => {
@@ -704,7 +661,6 @@ useEffect(() => {
               </div>
             )}
 
-            {/* Scrollable Review List */}
             <div className="mt-6 max-h-[400px] overflow-y-auto space-y-4 pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
               {reviews.length > 0 ? (
                 reviews.map((review, index) => (
@@ -747,7 +703,6 @@ useEffect(() => {
               )}
             </div>
 
-            {/* Review Input Section */}
             {userRole === "user" && (
               <div className="mt-8">
                 <Review
@@ -759,7 +714,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Ads Section (Right 1/3) - Only visible on larger screens */}
         <div className="hidden lg:block lg:w-1/3 lg:pl-8">
           <div className="sticky top-4">
             <ProductAdsDisplay />
@@ -767,7 +721,6 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* Related Products - Full width below */}
       {productData && (
         <div className="mt-12">
           <RelatedProducts
