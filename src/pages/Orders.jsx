@@ -162,24 +162,30 @@ const Orders = () => {
                         <p className="text-lg">{formatPrice(item.price)}</p>
                         <p>Quantity: {item.quantity}</p>
                       </div>
-                      <p className="mt-2">
-                        Discount:{" "}
-                        <span className="text-green-500">
-                          -{item.discount || 0}%
-                        </span>
-                      </p>
-                      {item.variationDetails && item.variationDetails.length > 0 && (
-                        <div className="mt-2">
-                          Variation:
-                          <ul className="text-green-500 list-disc list-inside">
-                            {item.variationDetails.map((variation, idx) => (
-                              <li key={idx}>
-                                {variation.variationName} - {variation.optionName} (+₱{variation.priceAdjustment})
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
+                      {item.discount > 0 && (
+                        <p className="mt-2">
+                          Discount:{" "}
+                          <span className="text-green-500">
+                            -{item.discount}%
+                          </span>
+                        </p>
                       )}
+
+                      {item.variationDetails &&
+                        item.variationDetails.length > 0 && (
+                          <div className="mt-2">
+                            Variation:
+                            <ul className="text-green-500 list-disc list-inside">
+                              {item.variationDetails.map((variation, idx) => (
+                                <li key={idx}>
+                                  {variation.variationName} -{" "}
+                                  {variation.optionName} (+₱
+                                  {variation.priceAdjustment})
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                       <p className="mt-2">
                         Total:{" "}
