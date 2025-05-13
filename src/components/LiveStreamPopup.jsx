@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import LiveSellingUser from "./LiveSellingUser";
-
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
 const LiveStreamPopup = () => {
   const [isLive, setIsLive] = useState(false);
   const [popupState, setPopupState] = useState("closed");
@@ -13,7 +13,7 @@ const LiveStreamPopup = () => {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const response = await fetch("https://ecommerce-server-d8a1.onrender.com/api/profile", {
+        const response = await fetch(`${backendUrl}/api/profile`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -35,7 +35,7 @@ const LiveStreamPopup = () => {
     const checkLiveStatus = async () => {
       try {
         const response = await fetch(
-          "https://ecommerce-server-d8a1.onrender.com/api/livestream/status"
+          `${backendUrl}/api/livestream/status`
         );
         if (response.ok) {
           const data = await response.json();

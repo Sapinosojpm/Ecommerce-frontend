@@ -5,10 +5,13 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import "../css/Order.css";
 import Lenis from "lenis";
+import { useNavigate } from "react-router-dom";
+
 const Orders = () => {
   const { backendUrl, token, currency, region, regions } =
     useContext(ShopContext);
   const [groupedOrders, setGroupedOrders] = useState([]);
+  const navigate = useNavigate();
 
   // scroll effect
   useLayoutEffect(() => {
@@ -201,13 +204,28 @@ const Orders = () => {
                   </div>
                 </div>
               ))}
+              {order.status?.toLowerCase() === "delivered" && (
+                <div className="flex justify-end gap-4 mt-4">
+                  {order.items.map((item) => (
+                    <button
+                      key={item._id}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-sm"
+                      onClick={() =>
+                        navigate(`/product/${item._id}?review=true`)
+                      }
+                    >
+                      Review {item.name}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div className="flex justify-end mt-4">
-                {order.status !== "Delivered" &&
-                  order.status !== "Canceled" &&
-                  order.status !== "Packing" &&
-                  order.status !== "Shipped" &&
-                  order.status !== "Out for delivery" && (
+                {order.status !== "delivered" &&
+                  order.status !== "canceled" &&
+                  order.status !== "packing" &&
+                  order.status !== "shipped" &&
+                  order.status !== "out for delivery" && (
                     <button
                       className="px-4 py-2 text-sm font-medium border rounded-sm"
                       onClick={() => {

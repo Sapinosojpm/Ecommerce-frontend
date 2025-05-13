@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState, useLayoutEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { twMerge } from "tailwind-merge";
 import { ShopContext } from "../context/ShopContext";
@@ -36,6 +36,8 @@ const Product = () => {
   const [finalPrice, setFinalPrice] = useState(0);
   const [availableQuantity, setAvailableQuantity] = useState(0);
   const [activeVariationName, setActiveVariationName] = useState(null);
+  const { search } = useLocation();
+  const showReviewForm = new URLSearchParams(search).get("review") === "true";
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -710,7 +712,7 @@ const Product = () => {
               )}
             </div>
 
-            {userRole === "user" && (
+            {userRole === "user" && showReviewForm && (
               <div className="mt-8">
                 <Review
                   productId={productId}
