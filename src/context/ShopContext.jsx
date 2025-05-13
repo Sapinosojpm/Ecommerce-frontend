@@ -41,46 +41,69 @@ const ShopContextProvider = (props) => {
   const [buyNowItem, setBuyNowItem] = useState(null);
 
   // Add this to your ShopContext.jsx
-  // Update the handleBuyNow function
-  // In ShopContext.jsx, update the handleBuyNow function
   const handleBuyNow = async (itemId, quantity, variations = {}) => {
-    try {
-      const itemInfo = products.find((product) => product._id === itemId);
+  try {
+    const itemInfo = products.find((product) => product._id === itemId);
 
-      if (!itemInfo) {
-        toast.error("Product not found");
-        return;
-      }
-
-      // Calculate variation adjustment
-      const variationAdjustment = Object.values(variations).reduce(
-        (sum, opt) => sum + (opt.priceAdjustment || 0),
-        0
-      );
-
-      const itemWithVariations = {
-        ...itemInfo,
-        quantity,
-        variations,
-        price: itemInfo.price + variationAdjustment,
-        originalPrice: itemInfo.price,
-        variationAdjustment,
-        weight: itemInfo.weight || 0,
-      };
-
-      // Clear any existing cart items
-      // setCartItems({});
-
-      // Set the buy now item
-      setBuyNowItem(itemWithVariations);
-
-      // Navigate to place order
-      navigate("/place-order");
-    } catch (error) {
-      console.error("Error in handleBuyNow:", error);
-      toast.error("Failed to process Buy Now");
+    if (!itemInfo) {
+      toast.error("Product not found");
+      return;
     }
-  };
+
+    // Validate and filter selected variation (like addToCart)
+    const selectedVariations = {};
+    if (variations && Object.keys(variations).length > 0) {
+      const activeVariationName = Object.keys(variations)[0]; // Assuming only one is active
+
+      if (variations[activeVariationName]) {
+        const productVariation = itemInfo.variations.find(v => v.name === activeVariationName);
+        if (!productVariation) {
+          toast.error(`Variation ${activeVariationName} not found for this product`);
+          return;
+        }
+
+        const validOption = productVariation.options.find(o => o.name === variations[activeVariationName].name);
+        if (!validOption) {
+          toast.error(`Invalid option ${variations[activeVariationName].name} for variation ${activeVariationName}`);
+          return;
+        }
+
+        if (validOption.quantity <= 0) {
+          toast.error(`Option ${validOption.name} for ${activeVariationName} is out of stock`);
+          return;
+        }
+
+        selectedVariations[activeVariationName] = {
+          name: validOption.name,
+          priceAdjustment: validOption.priceAdjustment || 0,
+        };
+      }
+    }
+
+    // Calculate price adjustment
+    const variationAdjustment = Object.values(selectedVariations).reduce(
+      (sum, opt) => sum + (opt.priceAdjustment || 0),
+      0
+    );
+
+    const itemWithVariations = {
+      ...itemInfo,
+      quantity,
+      variations: selectedVariations,
+      price: itemInfo.price + variationAdjustment,
+      originalPrice: itemInfo.price,
+      variationAdjustment,
+      weight: itemInfo.weight || 0,
+    };
+
+    setCartItems({}); // Clear cart for "Buy Now"
+    setBuyNowItem(itemWithVariations);
+    navigate("/place-order");
+  } catch (error) {
+    console.error("Error in handleBuyNow:", error);
+    toast.error("Failed to process Buy Now");
+  }
+};
 
   useEffect(() => {
     if (buyNowItem) {
@@ -398,9 +421,9 @@ const ShopContextProvider = (props) => {
 
   console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   
-  // New buyNow function - Fixed undefined itemId issue
+ // New buyNow function
   const buyNow = async (productId, quantity, variations = null) => {
-    console.log("Buy now :", { productId, quantity, variations }); // Fixed reference to productId
+    console.log("Buy now :", { itemId, quantity, variations });
     if (quantity <= 0) {
       toast.error("Quantity must be greater than 0");
       return;
@@ -423,7 +446,7 @@ const ShopContextProvider = (props) => {
         await axios.post(
           `${backendUrl}/api/cart/clear`,
           {},
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { token } }
         );
 
         // Add the single item
@@ -434,7 +457,7 @@ const ShopContextProvider = (props) => {
             quantity,
             variations,
           },
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: { token } }
         );
       } catch (error) {
         console.error("Error updating cart:", error);
@@ -444,6 +467,7 @@ const ShopContextProvider = (props) => {
 
     navigate("/place-order");
   };
+
 
   // Fetch cards data
   const getCardsData = async () => {
