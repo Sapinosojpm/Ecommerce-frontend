@@ -40,6 +40,7 @@ import LiveStreamViewer from "./components/LiveSellingUser";
 import { useState } from "react";
 import ResetPassword from "./components/ResetPassword";
 import TokenDiagnostic from "./components/TokenDiagnostic";
+import ProductReview from './components/ProductReview';
 function App() {
   const [isLiveActive, setIsLiveActive] = useState(true); // Optional: Use your socket for real status
   const [isMaximized, setIsMaximized] = useState(false);
@@ -81,6 +82,7 @@ function App() {
                     path="/token-diagnostic"
                     element={<TokenDiagnostic />}
                   />
+                  
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/" element={<Home />} />
                   <Route path="/collection" element={<Collection />} />
