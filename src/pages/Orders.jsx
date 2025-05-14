@@ -12,7 +12,13 @@ const Orders = () => {
     useContext(ShopContext);
   const [groupedOrders, setGroupedOrders] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
+  const [loadingOrderId, setLoadingOrderId] = useState(null);
+const [loadingReturnId, setLoadingReturnId] = useState(null);
   const navigate = useNavigate();
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+const [paymentMethods, setPaymentMethods] = useState([]);
+const [selectedOrderId, setSelectedOrderId] = useState(null);
+
 
   // scroll effect
   useLayoutEffect(() => {
@@ -93,12 +99,63 @@ const Orders = () => {
   };
 
   const initiateReturn = async (orderId, itemId) => {
+  try {
+    setLoadingReturnId(itemId); // Add this state variable to track loading state
+    
+    // First check if return is eligible
+    const response = await axios.get(
+      `${backendUrl}/api/returns/check-eligibility`,
+      {
+        params: { orderId, itemId },
+        headers: { token },
+      }
+    );
+    
+    if (response.data.eligible) {
+      // Navigate to return form page with item details
+      navigate(`/return-product/${orderId}/${itemId}`, { 
+        state: { 
+          orderDetails: response.data.orderDetails 
+        }
+      });
+    } else {
+      toast.error(
+        response.data.message || "This item is not eligible for return"
+      );
+    }
+  } catch (error) {
+    console.error("Error checking return eligibility:", error);
+    toast.error(
+      error.response?.data?.message || 
+      "Failed to initiate product return. Please try again."
+    );
+  } finally {
+    setLoadingReturnId(null); // Clear loading state
+  }
+};
+
+  // In Orders.jsx, add a payNow function
+  const payNow = async (orderId) => {
     try {
-      // Navigate to the return form page with relevant information
-      navigate(`/return-product/${orderId}/${itemId}`);
+      setLoadingOrderId(orderId);
+
+      // Get payment methods available for this order
+      const response = await axios.get(
+        `${backendUrl}/api/order/${orderId}/payment`,
+        {
+          headers: { token },
+        }
+      );
+
+      // Show payment method selection modal
+      setPaymentMethods(response.data.paymentMethods);
+      setSelectedOrderId(orderId);
+      setShowPaymentModal(true);
     } catch (error) {
-      console.error("Error initiating return:", error);
-      toast.error("Failed to initiate product return. Please try again.");
+      console.error("Error initiating payment:", error);
+      toast.error("Failed to initiate payment. Please try again.");
+    } finally {
+      setLoadingOrderId(null);
     }
   };
 
@@ -507,8 +564,14 @@ const Orders = () => {
 
                     {/* Modified Pay Now button condition using the needsPayment helper */}
                     {needsPayment(order) && (
-                      <button className="px-4 py-2 text-xs font-medium text-white transition-colors bg-orange-600 rounded hover:bg-orange-700">
-                        Pay Now
+                      <button
+                        onClick={() => payNow(order.orderId)}
+                        className="px-4 py-2 text-xs font-medium text-white transition-colors bg-orange-600 rounded hover:bg-orange-700"
+                        disabled={loadingOrderId === order.orderId}
+                      >
+                        {loadingOrderId === order.orderId
+                          ? "Loading..."
+                          : "Pay Now"}
                       </button>
                     )}
 

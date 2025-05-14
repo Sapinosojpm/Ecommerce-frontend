@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
-import addressData from "../data/Philippines.json"; // Adjust the path
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Lenis from "lenis";
+import addressData from "../data/Philippines.json";
+
 const Profile = () => {
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const [userDetails, setUserDetails] = useState({
     firstName: "",
     lastName: "",
@@ -22,6 +23,7 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [editMode, setEditMode] = useState(false);
+  const [activeSection, setActiveSection] = useState("personal");
 
   // Dropdown states
   const [region, setRegion] = useState([]);
@@ -32,9 +34,9 @@ const Profile = () => {
   // scroll effect
   useLayoutEffect(() => {
     const lenis = new Lenis({
-      smooth: true, // Enables smooth scrolling
-      duration: 1.2, // Adjust smoothness
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Natural easing effect
+      smooth: true,
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
 
     function raf(time) {
@@ -43,7 +45,7 @@ const Profile = () => {
     }
     requestAnimationFrame(raf);
 
-    return () => lenis.destroy(); // Cleanup
+    return () => lenis.destroy();
   }, []);
 
   // Load regions from JSON
@@ -80,7 +82,7 @@ const Profile = () => {
         if (!response.ok) throw new Error("Failed to fetch user details");
   
         const data = await response.json();
-        console.log("Fetched User Data:", data); // ✅ Debugging
+        console.log("Fetched User Data:", data);
   
         // Step 1: Set user details
         setUserDetails(data);
@@ -89,7 +91,7 @@ const Profile = () => {
         // Step 2: Ensure dropdowns update AFTER state update
         setTimeout(() => {
           updateDropdowns(data);
-        }, 100); // ✅ Give React time to update state
+        }, 100);
   
       } catch (error) {
         console.error("Error fetching user details:", error);
@@ -102,7 +104,6 @@ const Profile = () => {
     fetchUserDetails();
   }, []);
   
-  
   useEffect(() => {
     if (userDetails.region) {
       updateDropdowns(userDetails);
@@ -110,12 +111,9 @@ const Profile = () => {
   }, [userDetails]);
 
   const regionMapping = Object.entries(addressData).reduce((acc, [key, value]) => {
-    acc[key] = value.region_name; // Convert "07" -> "Central Visayas"
+    acc[key] = value.region_name;
     return acc;
   }, {});
-  
-  
-  
   
   const updateDropdowns = (data) => {
     console.log("Updating dropdowns with data:", data);
@@ -154,28 +152,19 @@ const Profile = () => {
       setBarangays([]);
     }
   };
-  
-  
-  
 
   useEffect(() => {
     if (userDetails.region) {
       console.log("🔥 Running updateDropdowns with:", userDetails);
       updateDropdowns(userDetails);
     }
-  }, [userDetails]); // ✅ Runs only when `userDetails` updates
+  }, [userDetails]);
   
-  
-  
-  
-  
-  
-
   // Handle form input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
   
-    console.log(`Changing ${name}:`, value); // ✅ Debugging
+    console.log(`Changing ${name}:`, value);
   
     setFormData((prev) => {
       let updatedData = { ...prev, [name]: value };
@@ -203,23 +192,16 @@ const Profile = () => {
     });
   };
   
-  
-  
-  
-  
-    
-  
-
   // Handle form submission (update user details)
   const handleSubmit = async (e) => {
     e.preventDefault();
   
     const updatedData = {
       ...formData,
-      region: String(formData.region), // ✅ Convert region to a string before sending
+      region: String(formData.region),
     };
   
-    console.log("🚀 Data being sent to backend:", updatedData); // Debugging
+    console.log("🚀 Data being sent to backend:", updatedData);
   
     if (JSON.stringify(userDetails) === JSON.stringify(updatedData)) {
       toast.info("No changes detected.", { position: "top-right", autoClose: 2000 });
@@ -258,115 +240,290 @@ const Profile = () => {
       setLoading(false);
     }
   };
+
+  // Get user's first letter of first and last name for avatar
+  const getInitials = () => {
+    const first = formData.firstName ? formData.firstName.charAt(0).toUpperCase() : "";
+    const last = formData.lastName ? formData.lastName.charAt(0).toUpperCase() : "";
+    return first + last;
+  };
   
-  
-  
-  
-  
+  // Render form fields based on active section
+  const renderFormFields = () => {
+    switch(activeSection) {
+      case "personal":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800">Personal Information</h2>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">First Name</label>
+                <input 
+                  type="text" 
+                  name="firstName" 
+                  value={formData.firstName} 
+                  onChange={handleInputChange} 
+                  placeholder="First Name" 
+                  disabled={!editMode} 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                <input 
+                  type="text" 
+                  name="lastName" 
+                  value={formData.lastName} 
+                  onChange={handleInputChange} 
+                  placeholder="Last Name" 
+                  disabled={!editMode} 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Email</label>
+                <input 
+                  type="email" 
+                  name="email" 
+                  value={formData.email} 
+                  onChange={handleInputChange} 
+                  placeholder="Email" 
+                  disabled 
+                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg" 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+                <input 
+                  type="text" 
+                  name="phone" 
+                  value={formData.phone} 
+                  onChange={handleInputChange} 
+                  placeholder="Phone Number" 
+                  disabled={!editMode} 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        );
+        
+      case "address":
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-semibold text-gray-800">Address Information</h2>
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">Street Address</label>
+              <input 
+                type="text" 
+                name="street" 
+                value={formData.street} 
+                onChange={handleInputChange} 
+                placeholder="Street Address" 
+                disabled={!editMode} 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Region</label>
+                <select
+                  name="region"
+                  value={String(formData.region)}
+                  onChange={handleInputChange}
+                  disabled={!editMode}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  required
+                >
+                  <option value="">Select Region</option>
+                  {region.map((region) => (
+                    <option key={region.id} value={String(region.id)}>
+                      {region.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Province</label>
+                <select 
+                  name="province" 
+                  value={formData.province} 
+                  onChange={handleInputChange} 
+                  disabled={!editMode || !formData.region} 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select Province</option>
+                  {provinces.map((province) => (
+                    <option key={province} value={province}>
+                      {province}
+                    </option>
+                  ))} 
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">City/Municipality</label>
+                <select 
+                  name="city" 
+                  value={formData.city} 
+                  onChange={handleInputChange} 
+                  disabled={!editMode || !formData.province} 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select City/Municipality</option>
+                  {cities.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Barangay</label>
+                <select 
+                  name="barangay" 
+                  value={formData.barangay} 
+                  onChange={handleInputChange} 
+                  disabled={!editMode || !formData.city} 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                >
+                  <option value="">Select Barangay</option>
+                  {barangays.map((barangay) => (
+                    <option key={barangay} value={barangay}>
+                      {barangay}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="space-y-2 md:col-span-1">
+                <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+                <input 
+                  type="text" 
+                  name="postalCode" 
+                  value={formData.postalCode} 
+                  onChange={handleInputChange} 
+                  placeholder="Postal Code" 
+                  disabled={!editMode} 
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+        );
+        
+      default:
+        return null;
+    }
+  };
   
   return (
-    <div className="max-w-3xl p-8 mx-auto my-20 bg-gray-100 rounded-lg shadow-lg">
-  <h1 className="mb-10 text-3xl font-bold text-center text-gray-800">User Profile</h1>
-
-  {error && <p className="text-center text-red-500">{error}</p>}
-  {loading && <p className="text-center text-gray-500">Loading...</p>}
-
-  {!loading && (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Grid Layout for 2 Columns */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <input type="text" name="firstName" value={formData.firstName} onChange={handleInputChange} placeholder="First Name" disabled={!editMode} className="w-full px-4 py-2 border rounded-md" />
-        <input type="text" name="lastName" value={formData.lastName} onChange={handleInputChange} placeholder="Last Name" disabled={!editMode} className="w-full px-4 py-2 border rounded-md" />
-        
-        <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Email" disabled className="w-full px-4 py-2 bg-gray-200 border rounded-md" />
-        <input type="text" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Phone Number" disabled={!editMode} className="w-full px-4 py-2 border rounded-md" required/>
-        
-        <input type="text" name="street" value={formData.street} onChange={handleInputChange} placeholder="Street Address" disabled={!editMode} className="w-full col-span-2 px-4 py-2 border rounded-md" required/>
-        
-        {/* Address Select Inputs */}
-        <select
-  name="region"
-  value={String(formData.region)} // ✅ Ensure it's always a string
-  onChange={handleInputChange}
-  disabled={!editMode}
-  className="w-full px-4 py-2 border rounded-md" required
->
-  <option value="">Select Region</option>
-  {region.map((region) => (
-    <option key={region.id} value={String(region.id)}>
-      {region.name}  {/* Debugging */}
-    </option>
-  ))}
-</select>
-
-
-
-        <select required name="province" value={formData.province} onChange={handleInputChange} disabled={!editMode || !formData.region} className="w-full px-4 py-2 border rounded-md">
-          <option value="">Select Province</option>
-          {provinces.map((province) => (
-            <option key={province} value={province}>
-              {province}
-            </option>
-          ))} 
-        </select>
-
-        <select required name="city" value={formData.city} onChange={handleInputChange} disabled={!editMode || !formData.province} className="w-full px-4 py-2 border rounded-md">
-          <option value="">Select City/Municipality</option>
-          {cities.map((city) => (
-            <option key={city} value={city}>
-              {city}
-            </option>
-          ))}
-        </select>
-
-        <select required name="barangay" value={formData.barangay} onChange={handleInputChange} disabled={!editMode || !formData.city} className="w-full px-4 py-2 border rounded-md">
-          <option value="">Select Barangay</option>
-          {barangays.map((barangay) => (
-            <option key={barangay} value={barangay}>
-              {barangay}
-            </option>
-          ))}
-        </select>
-
-        <input required type="text" name="postalCode" value={formData.postalCode} onChange={handleInputChange} placeholder="Postal Code" disabled={!editMode} className="w-full px-4 py-2 border rounded-md" />
-      </div>
-
-      {/* Buttons */}
-<div className="flex justify-center mt-8 space-x-4">
-  {!editMode && (
-    <button onClick={() => setEditMode(true)} className="px-6 py-3 text-white bg-green-600 rounded-md">
-      Edit Profile
-    </button>
-  )}
-  {editMode && (
-    <>
-      <button
-        type="submit"
-        disabled={JSON.stringify(userDetails) === JSON.stringify(formData)}
-        className={`px-6 py-3 text-white rounded-md ${
-          JSON.stringify(userDetails) === JSON.stringify(formData) ? "bg-gray-400" : "bg-blue-600"
-        }`}
-      >
-        Save Changes
-      </button>
-      <button
-        type="button"
-        onClick={() => {
-          setFormData(userDetails); // Reset to original details
-          setEditMode(false); // Exit edit mode
-        }}
-        className="px-6 py-3 text-white bg-red-500 rounded-md"
-      >
-        Cancel
-      </button>
-    </>
-  )}
-</div>
-
-    </form>
-  )}
-</div>
-
+    <div className="max-w-4xl p-6 mx-auto my-10 mt-24 bg-white shadow-lg rounded-xl">
+      {/* Loading and Error States */}
+      {loading && (
+        <div className="flex items-center justify-center h-32">
+          <div className="w-12 h-12 border-4 border-t-4 border-gray-200 rounded-full border-t-blue-500 animate-spin"></div>
+        </div>
+      )}
+      
+      {error && (
+        <div className="p-4 mb-6 text-red-700 bg-red-100 border-l-4 border-red-500 rounded-lg">
+          <p className="font-medium">Error: {error}</p>
+        </div>
+      )}
+      
+      {!loading && !error && (
+        <>
+          {/* Profile Header */}
+          <div className="flex flex-col items-center justify-between pb-6 mb-6 text-center border-b md:flex-row md:text-left">
+            <div className="flex items-center mb-4 md:mb-0">
+              <div className="flex items-center justify-center w-16 h-16 mr-4 text-xl font-bold text-white bg-blue-600 rounded-full">
+                {getInitials()}
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-800">
+                  {formData.firstName} {formData.lastName}
+                </h1>
+                <p className="text-sm text-gray-500">{formData.email}</p>
+              </div>
+            </div>
+            
+            <div>
+              {!editMode ? (
+                <button 
+                  onClick={() => setEditMode(true)} 
+                  className="px-6 py-2 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                >
+                  Edit Profile
+                </button>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormData(userDetails);
+                      setEditMode(false);
+                    }}
+                    className="px-4 py-2 text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={JSON.stringify(userDetails) === JSON.stringify(formData)}
+                    className={`px-4 py-2 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                      JSON.stringify(userDetails) === JSON.stringify(formData)
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700 focus:ring-green-500"
+                    }`}
+                  >
+                    Save Changes
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+  
+          {/* Tab Navigation */}
+          <div className="flex mb-6 border-b">
+            <button
+              onClick={() => setActiveSection("personal")}
+              className={`px-4 py-3 font-medium ${
+                activeSection === "personal"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-blue-500"
+              }`}
+            >
+              Personal Information
+            </button>
+            <button
+              onClick={() => setActiveSection("address")}
+              className={`px-4 py-3 font-medium ${
+                activeSection === "address"
+                  ? "text-blue-600 border-b-2 border-blue-600"
+                  : "text-gray-600 hover:text-blue-500"
+              }`}
+            >
+              Address
+            </button>
+          </div>
+          
+          {/* Form Content */}
+          <form className="mb-6" onSubmit={handleSubmit}>
+            {renderFormFields()}
+          </form>
+        </>
+      )}
+    </div>
   );
 };
 
