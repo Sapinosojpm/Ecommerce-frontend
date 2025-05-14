@@ -186,13 +186,15 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
   const getFilteredOrders = () => {
     if (activeTab === "all") {
       return groupedOrders;
-    } else if (activeTab === "pending") {
-      return groupedOrders.filter(
-        (order) =>
-          (!order.payment || order.status?.toLowerCase() === "pending") &&
-          order.paymentMethod?.toLowerCase() !== "cod"
-      );
-    } else if (activeTab === "cod") {
+   } else if (activeTab === "pending") {
+  return groupedOrders.filter(
+    (order) =>
+      (!order.payment || order.status?.toLowerCase() === "pending") &&
+      order.paymentMethod?.toLowerCase() !== "cod" &&
+      order.status?.toLowerCase() !== "canceled"
+  );
+}
+ else if (activeTab === "cod") {
       return groupedOrders.filter(
         (order) =>
           order.paymentMethod?.toLowerCase() === "cod" &&
