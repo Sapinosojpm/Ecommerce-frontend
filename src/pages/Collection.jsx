@@ -143,7 +143,7 @@ const Collection = () => {
   }, []);
 
   return (
-    <div className="px-4 py-6 mx-auto mt-12 md:mt-0 max-w-screen-2xl md:py-12 sm:px-6 lg:px-8">
+    <div className="px-4 py-6 mx-auto mt-12 lg:mt-12 max-w-screen-2xl md:py-12 sm:px-6 lg:px-8">
       {/* Page Header with Title + Filters Toggle Button (Mobile) */}
       <div className="flex items-center justify-between pb-4 mb-6 border-b">
         <Title text1={'All'} text2={'PRODUCTS'} />
@@ -151,7 +151,7 @@ const Collection = () => {
         {/* Filter Toggle Button (Mobile Only) */}
         <button 
           onClick={() => setShowFilter(!showFilter)}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg sm:hidden"
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg lg:hidden"
         >
           <span className="font-medium">Filters</span>
           <img
@@ -164,22 +164,24 @@ const Collection = () => {
 
       <div className="flex flex-col gap-6 lg:flex-row">
         {/* Filter Sidebar - Overlay on mobile, sidebar on desktop */}
-        <div 
-          className={`
-            ${showFilter ? 'fixed inset-0 z-50 bg-black bg-opacity-50' : 'hidden'} 
-            sm:block sm:static sm:bg-transparent sm:z-auto
-          `}
+       <div 
+  className={`
+    ${showFilter ? 'fixed inset-0 z-50 bg-black bg-opacity-50' : 'hidden'} 
+    lg:block lg:static lg:bg-transparent lg:z-auto
+  `}
+
           onClick={(e) => {
             if (e.target === e.currentTarget) setShowFilter(false);
           }}
         >
-          <div 
-            className={`
-              ${showFilter ? 'translate-x-0' : '-translate-x-full sm:translate-x-0'} 
-              fixed top-0 left-0 h-full w-4/5 max-w-xs sm:max-w-none sm:w-60 
-              bg-white sm:bg-transparent sm:static transition-transform duration-300
-              overflow-y-auto p-6 sm:p-0 shadow-lg sm:shadow-none z-50
-            `}
+       <div 
+  className={`
+    ${showFilter ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'} 
+    fixed top-0 left-0 h-full w-4/5 max-w-xs lg:max-w-none lg:w-60 
+    bg-white lg:bg-transparent lg:static transition-transform duration-300
+    overflow-y-auto p-6 lg:p-0 shadow-lg lg:shadow-none z-50
+  `}
+
             onClick={(e) => e.stopPropagation()}
           >
             {/* Mobile Filter Header */}
