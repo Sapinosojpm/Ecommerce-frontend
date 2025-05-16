@@ -35,7 +35,8 @@ const AdsDisplay = () => {
         {ads.length > 0 ? (
           ads.slice(currentIndex, currentIndex + 5).map((ad) => (
             <a key={ad._id} href={ad.link} target="_blank" rel="noopener noreferrer">
-              <img src={ad.imageUrl} alt="Ad" className="w-auto h-auto max-w-full rounded-lg" />
+             <img src={ad.imageUrl} alt="Ad" className="object-contain w-full h-auto rounded-lg max-h-48 sm:max-h-40" />
+
             </a>
           ))
         ) : (

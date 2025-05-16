@@ -131,101 +131,106 @@ const Collection = () => {
   }, []);
 
   return (
-    <div className='flex flex-col sm:flex-row py-20 gap-6 sm:gap-10 border-t md:px-[2vw] px-4'>
-      {/* Filter Sidebar */}
-      <div className={`min-w-60 transition-all duration-300 ${showFilter ? 'block' : 'hidden'} sm:block`}>
-        <p
-          onClick={() => setShowFilter(!showFilter)}
-          className='flex items-center gap-2 my-2 text-xl cursor-pointer sm:hidden'
-        >
-          FILTERS
-          <img
-            className={`h-3 ${showFilter ? 'rotate-90' : ''}`}
-            src={assets.dropdown_icon}
-            alt=''
-          />
-        </p>
+  <div className='flex flex-col py-20 gap-6 border-t md:px-[2vw] px-4'>
 
-        {/* Category Filter */}
-        <div className='py-3 pl-5 mt-6 border border-gray-300 rounded-lg'>
-          <p className='mb-3 text-sm font-medium'>CATEGORIES</p>
-          {/* "Select All" Checkbox */}
-          <label className='flex items-center gap-2 text-sm font-light text-gray-700'>
-            <input
-              type='checkbox'
-              checked={category.length === categories.length}
-              onChange={toggleSelectAllCategories}
-              className='w-3'
-            />
-            Select All
-          </label>
-          {/* Individual Category Checkboxes */}
-          <div className='flex flex-col gap-2 text-sm font-light text-gray-700'>
-            {categories.map((cat) => (
-              <label key={cat._id} className='flex items-center gap-2'>
-                <input
-                  type='checkbox'
-                  value={cat.name}
-                  checked={category.includes(cat.name)}
-                  onChange={toggleCategory}
-                  className='w-3'
-                />
-                {cat.name}
-              </label>
-            ))}
-          </div>
+    {/* Filter Toggle Button - Mobile */}
+    <div className='mb-4 sm:hidden'>
+      <button
+        onClick={() => setShowFilter(!showFilter)}
+        className='flex items-center justify-between w-full px-4 py-2 text-sm font-medium bg-gray-100 border rounded-md'
+      >
+        Filters
+        <img
+          className={`h-3 transition-transform ${showFilter ? 'rotate-90' : ''}`}
+          src={assets.dropdown_icon}
+          alt='Toggle'
+        />
+      </button>
+    </div>
+
+    {/* Filter Sidebar - Always visible on sm+ */}
+    <div className={`transition-all duration-300 ${showFilter ? 'block' : 'hidden'} sm:block`}>
+      {/* Category Filter */}
+      <div className='py-3 pl-5 mt-2 border border-gray-300 rounded-lg'>
+        <p className='mb-3 text-sm font-medium'>CATEGORIES</p>
+        <label className='flex items-center gap-2 text-sm font-light text-gray-700'>
+          <input
+            type='checkbox'
+            checked={category.length === categories.length}
+            onChange={toggleSelectAllCategories}
+            className='w-3'
+          />
+          Select All
+        </label>
+        <div className='flex flex-col gap-2 mt-2 text-sm font-light text-gray-700'>
+          {categories.map((cat) => (
+            <label key={cat._id} className='flex items-center gap-2'>
+              <input
+                type='checkbox'
+                value={cat.name}
+                checked={category.includes(cat.name)}
+                onChange={toggleCategory}
+                className='w-3'
+              />
+              {cat.name}
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+
+    {/* Main Content: Products */}
+    <div className='flex flex-col w-full gap-6 sm:flex-row'>
+      <div className='flex flex-col flex-1'>
+        {/* Title + Sorting */}
+        <div className='flex items-center justify-between mb-6 text-base sm:text-2xl'>
+          <Title text1={'All'} text2={'PRODUCTS'} />
+          <select
+            onChange={(e) => setSortType(e.target.value)}
+            className='px-3 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none'
+          >
+            <option value='relavant'>Sort by: Relevant</option>
+            <option value='low-high'>Sort by: Low to High</option>
+            <option value='high-low'>Sort by: High to Low</option>
+          </select>
+        </div>
+
+        {/* Product Grid */}
+        <div className='grid grid-cols-2 gap-4 sm:grid-cols-3 gap-y-6'>
+          {filterProducts.length > 0 ? (
+            filterProducts.map((item) => (
+              <ProductItem
+                key={item._id}
+                name={item.name}
+                id={item._id}
+                quantity={item.quantity}
+                price={item.price}
+                discount={item.discount}
+                video={item.video}
+                image={item.image}
+                description={item.description}
+                variations={item.variations}
+              />
+            ))
+          ) : (
+            <p className='text-center text-gray-500 col-span-full'>No products found.</p>
+          )}
         </div>
       </div>
 
-     {/* Main Content (Products + Ads) */}
-<div className='flex w-full gap-6'>
-  {/* Product Display Section */}
-  <div className='flex flex-col flex-1'>
-    <div className='flex justify-between mb-6 text-base sm:text-2xl'>
-      <Title text1={'All'} text2={'PRODUCTS'} />
-
-      {/* Sorting Dropdown */}
-      <select
-        onChange={(e) => setSortType(e.target.value)}
-        className='px-4 py-2 text-sm border-2 border-gray-300 rounded-lg focus:outline-none focus:border-blue-500'
-      >
-        <option value='relavant'>Sort by: Relevant</option>
-        <option value='low-high'>Sort by: Low to High</option>
-        <option value='high-low'>Sort by: High to Low</option>
-      </select>
+      {/* Ads - Visible only on sm and up */}
+      <div className='hidden w-1/4 sm:flex'>
+        <AdsDisplay />
+      </div>
     </div>
 
-    {/* Product Grid */}
-    <div className='grid flex-1 grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3 gap-y-6'>
-      {filterProducts.length > 0 ? (
-        filterProducts.map((item) => (
-          <ProductItem
-            key={item._id}
-            name={item.name}
-            id={item._id}
-            quantity={item.quantity}
-            price={item.price}
-            discount={item.discount}
-            video={item.video}
-            image={item.image}
-            description={item.description}
-            variations={item.variations}
-          />
-        ))
-      ) : (
-        <p className='text-center text-gray-500 col-span-full'>No products found.</p>
-      )}
+    {/* Ads - Mobile version below product grid */}
+    <div className='sm:hidden'>
+      <AdsDisplay />
     </div>
   </div>
+);
 
-  {/* Ads Section - Pantay sa Products */}
-  <div className='flex flex-col w-1/4'>
-    <AdsDisplay/>
-  </div>
-</div>
-
-    </div>
-  );
 };
 
 export default Collection;
