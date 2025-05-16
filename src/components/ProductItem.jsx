@@ -169,9 +169,10 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
 
       <div className="flex flex-col gap-2 p-4">
         <Link
-          to={`/product/${id}`}
-          className="relative block w-full py-3 overflow-hidden text-center text-white transition-all duration-300 bg-[#088395] rounded- group hover:bg-black"
-        >
+  to={`/product/${id}`}
+  className="hidden sm:block relative w-full py-3 overflow-hidden text-center text-white transition-all duration-300 bg-[#088395] rounded- group hover:bg-black"
+>
+
           <span className="absolute transition-all duration-300 ease-in-out -translate-x-1/2 -translate-y-1/2 opacity-100 left-1/2 top-1/2 group-hover:translate-x-full group-hover:opacity-0">
             View Details
           </span>

@@ -41,76 +41,83 @@ const ShopContextProvider = (props) => {
   const [buyNowItem, setBuyNowItem] = useState(null);
 
   // Add this to your ShopContext.jsx
+  
   const handleBuyNow = async (itemId, quantity, variations = {}) => {
-  try {
-    const itemInfo = products.find((product) => product._id === itemId);
+    try {
+      const itemInfo = products.find((product) => product._id === itemId);
 
-    if (!itemInfo) {
-      toast.error("Product not found");
-      return;
-    }
-
-    // Validate and filter selected variation (like addToCart)
-    const selectedVariations = {};
-    if (variations && Object.keys(variations).length > 0) {
-      const activeVariationName = Object.keys(variations)[0]; // Assuming only one is active
-
-      if (variations[activeVariationName]) {
-        const productVariation = itemInfo.variations.find(v => v.name === activeVariationName);
-        if (!productVariation) {
-          toast.error(`Variation ${activeVariationName} not found for this product`);
-          return;
-        }
-
-        const validOption = productVariation.options.find(o => o.name === variations[activeVariationName].name);
-        if (!validOption) {
-          toast.error(`Invalid option ${variations[activeVariationName].name} for variation ${activeVariationName}`);
-          return;
-        }
-
-        if (validOption.quantity <= 0) {
-          toast.error(`Option ${validOption.name} for ${activeVariationName} is out of stock`);
-          return;
-        }
-
-        selectedVariations[activeVariationName] = {
-          name: validOption.name,
-          priceAdjustment: validOption.priceAdjustment || 0,
-        };
+      if (!itemInfo) {
+        toast.error("Product not found");
+        return;
       }
+
+      const selectedVariations = {};
+      if (variations && Object.keys(variations).length > 0) {
+        const activeVariationName = Object.keys(variations)[0];
+
+        if (variations[activeVariationName]) {
+          const productVariation = itemInfo.variations.find(
+            (v) => v.name === activeVariationName
+          );
+          if (!productVariation) {
+            toast.error(
+              `Variation ${activeVariationName} not found for this product`
+            );
+            return;
+          }
+
+          const validOption = productVariation.options.find(
+            (o) => o.name === variations[activeVariationName].name
+          );
+          if (!validOption) {
+            toast.error(
+              `Invalid option ${variations[activeVariationName].name} for variation ${activeVariationName}`
+            );
+            return;
+          }
+
+          if (validOption.quantity <= 0) {
+            toast.error(
+              `Option ${validOption.name} for ${activeVariationName} is out of stock`
+            );
+            return;
+          }
+
+          selectedVariations[activeVariationName] = {
+            name: validOption.name,
+            priceAdjustment: validOption.priceAdjustment || 0,
+          };
+        }
+      }
+
+      const variationAdjustment = Object.values(selectedVariations).reduce(
+        (sum, opt) => sum + (opt.priceAdjustment || 0),
+        0
+      );
+
+      const itemWithVariations = {
+        ...itemInfo,
+        quantity,
+        variations: selectedVariations,
+        price: itemInfo.price + variationAdjustment,
+        originalPrice: itemInfo.price,
+        variationAdjustment,
+        weight: itemInfo.weight || 0,
+      };
+
+      setBuyNowItem(itemWithVariations);
+      navigate("/place-order");
+    } catch (error) {
+      console.error("Error in handleBuyNow:", error);
+      toast.error("Failed to process Buy Now");
     }
-
-    // Calculate price adjustment
-    const variationAdjustment = Object.values(selectedVariations).reduce(
-      (sum, opt) => sum + (opt.priceAdjustment || 0),
-      0
-    );
-
-    const itemWithVariations = {
-      ...itemInfo,
-      quantity,
-      variations: selectedVariations,
-      price: itemInfo.price + variationAdjustment,
-      originalPrice: itemInfo.price,
-      variationAdjustment,
-      weight: itemInfo.weight || 0,
-    };
-
-    setCartItems({}); // Clear cart for "Buy Now"
-    setBuyNowItem(itemWithVariations);
-    navigate("/place-order");
-  } catch (error) {
-    console.error("Error in handleBuyNow:", error);
-    toast.error("Failed to process Buy Now");
-  }
-};
+  };
 
   useEffect(() => {
     if (buyNowItem) {
       console.log("✅ Buy Now Item Set:", buyNowItem);
     }
   }, [buyNowItem]);
-
   useEffect(() => {
     const fetchFeePerKilo = async () => {
       try {

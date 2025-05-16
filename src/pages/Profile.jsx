@@ -444,7 +444,7 @@ const Profile = () => {
       {!loading && !error && (
         <>
           {/* Profile Header */}
-          <div className="flex flex-col items-center justify-between pb-6 mb-6 text-center border-b md:flex-row md:text-left">
+         <div className="flex flex-col pb-6 mb-6 border-b md:flex-row md:items-center md:justify-between">
             <div className="flex items-center mb-4 md:mb-0">
               <div className="flex items-center justify-center w-16 h-16 mr-4 text-xl font-bold text-white bg-blue-600 rounded-full">
                 {getInitials()}
