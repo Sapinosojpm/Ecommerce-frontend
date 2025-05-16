@@ -197,23 +197,21 @@ const WebsiteReviewPage = () => {
         </div>
 
         {/* Right Sidebar Container - Hidden on mobile */}
-        <div className="flex-col hidden w-full h-full border border-gray-200 rounded-lg lg:flex lg:w-1/3">
-          {/* Ad Banner */}
-          <div className="p-2 mb-5">
-            <ProductsAdsDisplayHome />
-          </div>
+      <div className="flex flex-col w-full h-full p-4 space-y-6 border border-gray-200 rounded-lg">
+  {/* Ad Banner */}
+  <div>
+    <ProductsAdsDisplayHome />
+  </div>
 
-          {/* Push NewsletterBox to the bottom */}
-          <div className="pt-10 mt-auto">
-            <NewsletterBox />
-          </div>
-        </div>
+  {/* Newsletter at the bottom */}
+  <div className="mt-auto">
+    <NewsletterBox />
+  </div>
+</div>
+
       </div>
 
-      {/* Mobile-only Ad Banner - Shown only on small screens */}
-      <div className="mt-6 lg:hidden">
-        <ProductsAdsDisplayHome />
-      </div>
+    
     </div>
   );
 };

@@ -10,18 +10,16 @@ const NewsletterBox = () => {
   const [discount, setDiscount] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  // Check if the user is logged in
   useEffect(() => {
-    const user = localStorage.getItem("token"); // Adjust according to your auth system
+    const user = localStorage.getItem("token");
     setIsLoggedIn(!!user);
   }, []);
 
-  // Fetch the latest discount
   useEffect(() => {
     const fetchDiscount = async () => {
       try {
         const response = await axios.get(`${backendUrl}/api/admin/discounts`);
-        setDiscount(response.data.discountPercent); // Assuming backend returns { discountPercent }
+        setDiscount(response.data.discountPercent);
       } catch (error) {
         console.error("Error fetching discount:", error);
       }
@@ -45,7 +43,7 @@ const NewsletterBox = () => {
     try {
       const response = await axios.post(`${backendUrl}/api/subscribe`, { email });
       setMessage(response.data.message);
-      setEmail(""); // Reset email input on success
+      setEmail("");
     } catch (error) {
       setError(error.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
@@ -54,20 +52,22 @@ const NewsletterBox = () => {
   };
 
   return (
-    <div className="mx-2 my-4 text-white rounded-lg bg-darkGreen">
-      <p className="mb-4 text-2xl font-medium text-black">
-        Subscribe now & get {discount ? `${discount}%` : "a"} off
+    <div className="max-w-xl p-6 mx-2 mx-auto my-4 text-white rounded-lg md:max-w-2xl lg:max-w-3xl xl:max-w-4xl bg-darkGreen">
+      <p className="mb-4 text-xl font-medium text-center text-black sm:text-2xl md:text-3xl">
+        Subscribe now {discount ? `& get ${discount}% off` : "and get exclusive discounts!"}
       </p>
 
       {!isLoggedIn ? (
-        <p className="mt-3 text-red-500">Please log in to subscribe and receive a discount.</p>
+        <p className="mt-3 text-sm text-center text-red-500 sm:text-base">
+          Please log in to subscribe and receive a discount.
+        </p>
       ) : (
         <form
           onSubmit={onSubmitHandler}
-          className="flex items-center gap-3 p-3 border border-gray-300 rounded-lg"
+          className="flex flex-col items-center gap-3 p-3 border border-gray-300 rounded-lg sm:flex-row"
         >
           <input
-            className="flex-1 p-3 text-black rounded-md"
+            className="w-full p-3 text-black rounded-md sm:flex-1"
             type="email"
             placeholder="Enter your email"
             value={email}
@@ -76,7 +76,7 @@ const NewsletterBox = () => {
           />
           <button
             type="submit"
-            className="px-6 py-3 text-white bg-black rounded-md hover:bg-gray-900 disabled:opacity-50"
+            className="w-full px-6 py-3 mt-3 text-white bg-black rounded-md sm:w-auto sm:mt-0 hover:bg-gray-900 disabled:opacity-50"
             disabled={loading}
           >
             {loading ? "Submitting..." : "SUBSCRIBE"}
@@ -84,8 +84,16 @@ const NewsletterBox = () => {
         </form>
       )}
 
-      {message && <p className="mt-4 text-green-500">{message}</p>}
-      {error && <p className="mt-4 text-red-500">{error}</p>}
+      {message && (
+        <p className="mt-4 text-center text-green-500" aria-live="polite">
+          {message}
+        </p>
+      )}
+      {error && (
+        <p className="mt-4 text-center text-red-500" aria-live="assertive">
+          {error}
+        </p>
+      )}
     </div>
   );
 };
