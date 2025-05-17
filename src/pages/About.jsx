@@ -25,7 +25,7 @@ const About = () => {
     fetchAboutData();
   }, []);
 
-  if (!aboutData) return <div className="flex items-center justify-center min-h-screen text-lg">Loading...</div>;
+  // if (!aboutData) return <div className="flex items-center justify-center min-h-screen text-lg">Loading...</div>;
 
   return (
     <div className="container px-6 mx-auto my-20 md:px-12">
