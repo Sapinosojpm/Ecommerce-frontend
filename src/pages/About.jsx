@@ -3,7 +3,6 @@ import Title from '../components/Title';
 import { assets } from '../assets/assets';
 import axios from 'axios';
 import Map3D from '../components/Map3D';
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
 import ChatPopup from '../components/ChatPopup';
 import Newsletter from '../components/NewsletterBox';
 import JobPosting from '../components/JobPostingPopup';
@@ -11,7 +10,7 @@ import JobPosting from '../components/JobPostingPopup';
 const About = () => {
   const [aboutData, setAboutData] = useState(null);
   const [aboutImage, setAboutImage] = useState(null);
-
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
   useEffect(() => {
     const fetchAboutData = async () => {
       try {
@@ -25,7 +24,7 @@ const About = () => {
     fetchAboutData();
   }, []);
 
-  // if (!aboutData) return <div className="flex items-center justify-center min-h-screen text-lg">Loading...</div>;
+  if (!aboutData) return <div className="flex items-center justify-center min-h-screen text-lg">Loading...</div>;
 
   return (
     <div className="container px-6 mx-auto my-20 md:px-12">
