@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import Title from '../components/Title';
 import { assets } from '../assets/assets';
 import axios from 'axios';
@@ -6,11 +6,12 @@ import Map3D from '../components/Map3D';
 import ChatPopup from '../components/ChatPopup';
 import Newsletter from '../components/NewsletterBox';
 import JobPosting from '../components/JobPostingPopup';
-
+import shopContext from '../context/ShopContext'
 const About = () => {
   const [aboutData, setAboutData] = useState(null);
   const [aboutImage, setAboutImage] = useState(null);
-  const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  // const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const {backendUrl} = useContext(shopContext);
   useEffect(() => {
     const fetchAboutData = async () => {
       try {
