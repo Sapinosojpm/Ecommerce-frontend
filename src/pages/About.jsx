@@ -3,27 +3,29 @@ import Title from '../components/Title';
 import { assets } from '../assets/assets';
 import axios from 'axios';
 import Map3D from '../components/Map3D';
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
 import ChatPopup from '../components/ChatPopup';
 import Newsletter from '../components/NewsletterBox';
 import JobPosting from '../components/JobPostingPopup';
-
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+console.log(backendUrl);
 const About = () => {
   const [aboutData, setAboutData] = useState(null);
   const [aboutImage, setAboutImage] = useState(null);
+// About.jsx
+useEffect(() => {
+  const fetchAboutData = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/api/about`);
+      setAboutData(response.data);
+      setAboutImage(response.data.image);
+    } catch (error) {
+      console.error('Error fetching about data:', error);
+      console.error('Error details:', error.response); // Add this line
+    }
+  };
+  fetchAboutData();
+}, []);
 
-  useEffect(() => {
-    const fetchAboutData = async () => {
-      try {
-        const response = await axios.get(`${backendUrl}/api/about`);
-        setAboutData(response.data);
-        setAboutImage(response.data.image);
-      } catch (error) {
-        console.error('Error fetching about data:', error);
-      }
-    };
-    fetchAboutData();
-  }, []);
 
   if (!aboutData) return <div className="flex items-center justify-center min-h-screen text-lg">Loading...</div>;
 
