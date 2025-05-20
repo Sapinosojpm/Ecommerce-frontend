@@ -14,13 +14,16 @@ import DealsPopup from "../components/DealsPopup";
 import JobPostingPopup from "../components/JobPostingPopup";
 import { YoutubeProvider } from "../context/youtubeContext";
 import SaleProductsList from "../components/SaleProductsList";
+
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 const Home = () => {
   const [components, setComponents] = useState(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/homepage`);
+        const response = await axios.get(`${backendUrl}/api/homepage`);
         setComponents(response.data.components);
       } catch (error) {
         console.error("Error fetching homepage settings:", error);
@@ -49,7 +52,7 @@ const Home = () => {
     
       try {
         const response = await axios.post(
-          `${import.meta.env.VITE_BACKEND_URL}/api/pageviews/track`,
+          `${backendUrl}/api/pageviews/track`,
           { page, userId, sessionId }, 
           { headers: { Authorization: token ? `Bearer ${token}` : "", "x-session-id": sessionId } }
         );
