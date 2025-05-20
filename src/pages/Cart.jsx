@@ -289,7 +289,7 @@ const Cart = () => {
                                     </span>
                                     <span className="text-gray-700">
                                       {variationData.name}
-                                      {variationData.priceAdjustment ? (
+                                      {/* {variationData.priceAdjustment ? (
                                         <span className="ml-1 text-xs text-gray-500">
                                           (
                                           {variationData.priceAdjustment > 0
@@ -301,7 +301,7 @@ const Cart = () => {
                                           ).toLocaleString()}
                                           )
                                         </span>
-                                      ) : null}
+                                      ) : null} */}
                                     </span>
                                   </div>
 

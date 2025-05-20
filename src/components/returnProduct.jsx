@@ -316,7 +316,7 @@ const ReturnProduct = () => {
 
       {/* Only show return form if no pending return exists */}
       {!returnRequest ||
-      !["pending", "approved", "processing"].includes(returnStatus) ? (
+        !["pending", "approved", "processing", "refunded", "rejected"].includes(returnStatus) ? (
         <>
           {/* Progress Indicators */}
           <div className="max-w-3xl mx-auto mb-6">

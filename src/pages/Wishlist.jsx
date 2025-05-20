@@ -74,6 +74,7 @@ const Wishlist = () => {
         }
 
         const data = await response.json();
+        console.log("Fetched Wishlist Data:", data); // 👈 Check this log
         setWishlistData(data.wishlist || []);
       } catch (error) {
         console.error("Error fetching wishlist:", error);
@@ -120,7 +121,7 @@ const Wishlist = () => {
 
   const handleClearWishlist = async () => {
     console.log("User ID before clearing wishlist:", userId);
-  
+
     try {
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_URL}/api/wishlist/clear/${userId}`,
@@ -131,19 +132,20 @@ const Wishlist = () => {
           },
         }
       );
-  
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Failed to clear wishlist.");
       }
-  
+
       setWishlistData([]); // Clear wishlist in the state
-      toast.success("Wishlist cleared successfully!", { position: "top-right" });
+      toast.success("Wishlist cleared successfully!", {
+        position: "top-right",
+      });
     } catch (error) {
       console.error("Error clearing wishlist:", error);
     }
   };
-  
 
   const calculateDiscountPrice = (price, discount) => {
     return discount ? price - price * (discount / 100) : price;
@@ -164,8 +166,6 @@ const Wishlist = () => {
             Clear Wishlist
           </button>
         </div>
-
-        
       )}
 
       <div>
@@ -181,7 +181,7 @@ const Wishlist = () => {
           wishlistData.map((product) => (
             <div
               key={product._id}
-              className="py-4 border-t border-b text-gray-700 grid grid-cols-[4fr_2fr_0.5fr] sm:grid-cols-[4fr_2fr_0.5fr] items-center gap-4"
+              className="py-5 border-t border-b text-gray-700 grid grid-cols-[4fr_2fr_0.5fr] sm:grid-cols-[4fr_2fr_0.5fr] items-center gap-4"
             >
               <div className="flex items-start gap-6">
                 <Link to={`/product/${product._id}`}>
@@ -197,6 +197,9 @@ const Wishlist = () => {
                       {product.name}
                     </p>
                   </Link>
+                  <p className="text-xs text-gray-500 sm:text-sm">
+                    <span className="text-gray-600">{product.description}</span>{" "}
+                  </p>
                   <div className="flex items-center gap-5 mt-2">
                     {product.discount > 0 ? (
                       <div>
@@ -219,10 +222,14 @@ const Wishlist = () => {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-3 mt-4">
-                    <p className="font-medium">Available Quantity:</p>
-                    <span>{product.quantity}</span>
-                  </div>
+                  {/* <div className="flex items-center gap-3 mt-4">
+                    <span className="text-gray-600">Stock:</span>
+                    <span  className={
+                                        product.quantity > 0
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                      }>{product.quantity} available</span>
+                  </div> */}
                 </div>
               </div>
 

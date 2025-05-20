@@ -186,7 +186,7 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
     { id: "shipped", label: "To Receive" },
     { id: "delivered", label: "Completed" },
     { id: "canceled", label: "Cancelled" },
-    { id: "returned", label: "Returns" },
+    { id: "returned", label: "Return Refund" },
   ];
 
   // Filter orders based on active tab
@@ -570,17 +570,17 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
   )}
                           </div>
                         ))}
-                        <button className="px-4 py-2 text-xs font-medium text-blue-600 transition-colors bg-white border border-blue-600 rounded hover:bg-blue-50">
+                        {/* <button className="px-4 py-2 text-xs font-medium text-blue-600 transition-colors bg-white border border-blue-600 rounded hover:bg-blue-50">
                           Buy Again
-                        </button>
+                        </button> */}
                       </div>
                     )}
-
+{/* 
                     {order.status?.toLowerCase() === "shipped" && (
                       <button className="px-4 py-2 text-xs font-medium text-white transition-colors bg-green-600 rounded hover:bg-green-700">
                         Track Order
                       </button>
-                    )}
+                    )} */}
 
                     {/* Modified Pay Now button condition using the needsPayment helper */}
                     {needsPayment(order) && (
