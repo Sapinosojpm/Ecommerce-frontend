@@ -48,60 +48,81 @@ const ReturnProduct = () => {
     { value: "other", label: "Other", icon: "✨" }
   ];
 
-  console.log("returnStatus", returnStatus);
 
   // Fetch order details if not provided in navigation state
   useEffect(() => {
-    const fetchData = async () => {
-      if (!orderDetails && orderId && itemId) {
-        try {
-          setLoadingDetails(true);
-          
-          // First check if return already exists
-          const returnCheck = await axios.get(
-            `${backendUrl}/api/returns/check-return`,
-            {
-              params: { orderId, itemId },
-              headers: { token },
-            }
-          );
-          
-          if (returnCheck.data.exists) {
-            setReturnRequest(returnCheck.data.returnRequest);
-            setReturnStatus(returnCheck.data.returnRequest.status);
-            setReason(returnCheck.data.returnRequest.reason);
-            setDescription(returnCheck.data.returnRequest.description);
-            setLoadingDetails(false);
-            return;
-          }
+  console.log("🔥 useEffect triggered with:", { orderId, itemId, orderDetails });
 
-          // If no return exists, check eligibility
-          const response = await axios.get(
-            `${backendUrl}/api/returns/check-eligibility`,
-            {
-              params: { orderId, itemId },
-              headers: { token },
-            }
-          );
-          
-          if (response.data.eligible) {
-            setOrderDetails(response.data.orderDetails);
-          } else {
-            toast.error(response.data.message || "This item is not eligible for return");
-            navigate("/orders");
+  const fetchData = async () => {
+    if (orderId && itemId) {
+      try {
+        setLoadingDetails(true);
+
+        // Always check if return request exists first
+        console.log("🔍 Checking if return already exists...");
+        const returnCheck = await axios.get(
+          `${backendUrl}/api/returns/check-return`,
+          {
+            params: { orderId, itemId },
+            headers: { token },
           }
-        } catch (error) {
-          console.error("Error fetching data:", error);
-          toast.error("Failed to load order details. Redirecting to orders page.");
-          navigate("/orders");
-        } finally {
+        );
+
+        console.log("🔙 Return check response:", returnCheck.data);
+
+        if (returnCheck.data.exists) {
+          const returnData = returnCheck.data.returnRequest;
+          console.log("✅ Return found:", returnData);
+
+          setReturnRequest(returnData);
+          setReturnStatus(returnData.status);
+          setReason(returnData.reason);
+          setDescription(returnData.description);
+
           setLoadingDetails(false);
+          return; // stop here if return request found
         }
+
+        // If no return request, check eligibility
+        console.log("🔍 No return found. Checking eligibility...");
+
+        const response = await axios.get(
+          `${backendUrl}/api/returns/check-eligibility`,
+          {
+            params: { orderId, itemId },
+            headers: { token },
+          }
+        );
+
+        console.log("🔙 Eligibility check response:", response.data);
+
+        if (response.data.eligible) {
+          console.log("✅ Item is eligible for return. Order details:", response.data.orderDetails);
+          setOrderDetails(response.data.orderDetails);
+        } else {
+          console.warn("❌ Not eligible for return:", response.data.message);
+          toast.error(response.data.message || "This item is not eligible for return");
+          navigate("/orders");
+        }
+      } catch (error) {
+        console.error("❌ Error fetching data:", error);
+        const errorMessage =
+          error.response?.data?.message ||
+          "Failed to load order details. Redirecting to orders page.";
+        toast.error(errorMessage);
+        navigate("/orders");
+      } finally {
+        setLoadingDetails(false);
       }
-    };
-    
-    fetchData();
-  }, [backendUrl, token, orderId, itemId, orderDetails, navigate]);
+    } else {
+      console.log("ℹ️ Skipping fetchData because missing orderId or itemId");
+    }
+  };
+
+  fetchData();
+}, [backendUrl, token, orderId, itemId, navigate]);
+
+
 
   const handleEvidenceChange = (e) => {
     const file = e.target.files[0];
@@ -201,8 +222,9 @@ const ReturnProduct = () => {
         }
         
         // Update local state with the new return request
-        setReturnRequest(returnResponse.data.return);
-        setReturnStatus(returnResponse.data.return.status);
+        const newReturn = returnResponse.data.return;
+        setReturnRequest(newReturn);
+        setReturnStatus(newReturn.status); // Properly set status from new return
         
         toast.success("Return request submitted successfully!");
       } else {
@@ -277,7 +299,7 @@ const ReturnProduct = () => {
       )}
 
       {/* Only show return form if no pending return exists */}
-      {(!returnRequest || returnStatus !== "pending") ? (
+      {(!returnRequest || !['pending', 'approved', 'processing'].includes(returnStatus)) ? ( 
         <>
           {/* Progress Indicators */}
           <div className="max-w-3xl mx-auto mb-6">
