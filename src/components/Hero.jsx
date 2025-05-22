@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import '../css/hero.css';  // Adjust the path if necessary
+import '../css/hero.css';  // Your CSS file
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const Hero = () => {
@@ -11,12 +11,14 @@ const Hero = () => {
       try {
         const { data } = await axios.get(`${backendUrl}/api/hero`);
         console.log('Hero data:', data);
-        if (data && data.image) {
-          // Ensure full URL for the image
+
+        if (data && (data.image || data.video)) {
           setHeroData({
             title: data.title,
             subtitle: data.subtitle,
-            image: `${backendUrl}${data.image}`,  // Add full URL for image
+            type: data.type || 'image',
+            image: data.image ? `${backendUrl}${data.image}` : null,
+            video: data.video ? `${backendUrl}${data.video}` : null,
           });
         }
       } catch (error) {
@@ -25,40 +27,70 @@ const Hero = () => {
     };
     fetchHeroData();
   }, []);
-  
 
   if (!heroData) return <p>Loading...</p>;
 
   return (
-    
     <div
-    id="section1"
-    className="flex flex-col sm:flex-row"
-    style={{
-      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url(${heroData.image})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      minHeight: '400px',
-    }}
-  >
-  
-      
-      <div 
-        id="section1-content" 
+      id="section1"
+      className="relative flex flex-col sm:flex-row"
+      style={{
+        minHeight: '400px',
+        position: 'relative',
+        color: 'white',
+      }}
+    >
+      {/* Video background */}
+      {heroData.type === 'video' && heroData.video && (
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            zIndex: 0,
+          }}
+          src={heroData.video}
+        />
+      )}
+
+      {/* Image background with overlay gradient */}
+      {heroData.type === 'image' && heroData.image && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url(${heroData.image})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            zIndex: 0,
+          }}
+        />
+      )}
+
+      {/* Content (text) */}
+      <div
+        id="section1-content"
         className="flex items-center justify-center w-full py-10 sm:w-3/4 sm:py-0 sm:pl-10 sm:pr-5 sm:my-0"
+        style={{ position: 'relative', zIndex: 1 }}
       >
-        
-        <div id="text-content-container" className="mx-6 py-[15%] sm:mx-16 text-center sm:text-left">
-          <h1 
-            id="text-content" 
-            className="pt-[10%]"
-          >
-            {heroData.title}
+        <div
+          id="text-content-container"
+          className="mx-6 py-[15%] sm:mx-16 text-center sm:text-left"
+        >
+          <h1 id="text-content" className="pt-[10%]">
+            {heroData.title.replace(/(^"|"$)/g, '')}
           </h1>
-          <p 
-            id="text-p" 
-            className="text-lg text-white sm:text-xl"
-          >
+          <p id="text-p" className="text-lg sm:text-xl">
             {heroData.subtitle}
           </p>
         </div>
