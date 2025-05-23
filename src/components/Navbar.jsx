@@ -98,29 +98,29 @@ const Navbar = () => {
   }, []);
 
   // Token validation and expiration check
-  // useEffect(() => {
-  //   const checkTokenExpiration = () => {
-  //     const token = localStorage.getItem("token");
-  //     if (!token) {
-  //       logout();
-  //       return;
-  //     }
+  useEffect(() => {
+    const checkTokenExpiration = () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        logout();
+        return;
+      }
 
-  //     try {
-  //       const payload = JSON.parse(atob(token.split(".")[1]));
-  //       const isExpired = payload.exp * 1000 < Date.now();
-  //       if (isExpired) {
-  //         logout();
-  //       }
-  //     } catch (error) {
-  //       logout();
-  //     }
-  //   };
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        const isExpired = payload.exp * 1000 < Date.now();
+        if (isExpired) {
+          logout();
+        }
+      } catch (error) {
+        logout();
+      }
+    };
 
-  //   checkTokenExpiration();
-  //   const interval = setInterval(checkTokenExpiration, 600000);
-  //   return () => clearInterval(interval);
-  // }, []);
+    checkTokenExpiration();
+    const interval = setInterval(checkTokenExpiration, 600000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Update userRole when token changes
   useEffect(() => {
