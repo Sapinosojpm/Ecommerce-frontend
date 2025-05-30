@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import "../css/Order.css";
 import Lenis from "lenis";
 import { useNavigate } from "react-router-dom";
-import { FiRotateCw } from 'react-icons/fi';
+import { FiRotateCw, FiTruck, FiMapPin, FiPlus, FiX } from 'react-icons/fi';
 
 const Orders = () => {
   const { backendUrl, token, currency, region, regions } =
@@ -14,19 +14,28 @@ const Orders = () => {
   const [groupedOrders, setGroupedOrders] = useState([]);
   const [activeTab, setActiveTab] = useState("all");
   const [loadingOrderId, setLoadingOrderId] = useState(null);
-const [loadingReturnId, setLoadingReturnId] = useState(null);
+  const [loadingReturnId, setLoadingReturnId] = useState(null);
+  const [loadingTrackingId, setLoadingTrackingId] = useState(null);
   const navigate = useNavigate();
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-const [paymentMethods, setPaymentMethods] = useState([]);
-const [selectedOrderId, setSelectedOrderId] = useState(null);
-
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
+  const [trackingInfo, setTrackingInfo] = useState(null);
+  const [showAddTrackingModal, setShowAddTrackingModal] = useState(false);
+  const [carriers, setCarriers] = useState([]);
+  const [trackingForm, setTrackingForm] = useState({
+    trackingNumber: '',
+    carrierCode: ''
+  });
+  const [selectedOrderForTracking, setSelectedOrderForTracking] = useState(null);
 
   // scroll effect
   useLayoutEffect(() => {
     const lenis = new Lenis({
-      smooth: true, // Enables smooth scrolling
-      duration: 1.2, // Adjust smoothness
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Natural easing effect
+      smooth: true,
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     });
 
     function raf(time) {
@@ -35,7 +44,7 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
     }
     requestAnimationFrame(raf);
 
-    return () => lenis.destroy(); // Cleanup
+    return () => lenis.destroy();
   }, []);
 
   const loadOrderData = async () => {
@@ -58,6 +67,7 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
           paymentMethod: order.paymentMethod,
           date: order.date,
           shippingFee: regions[region] || 0,
+          tracking: order.tracking,
           items: order.items.map((item) => ({
             ...item,
             shippingFee: regions[region] || 0,
@@ -67,6 +77,40 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
         setGroupedOrders(groupedData.reverse());
       }
     } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const fetchCarriers = async () => {
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/order/carriers`,
+        { headers: { token } }
+      );
+      if (response.data.success) {
+        setCarriers(response.data.carriers);
+      }
+    } catch (error) {
+      toast.error('Failed to fetch carriers');
+      console.error(error);
+    }
+  };
+
+  const addTracking = async () => {
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/order/${selectedOrderForTracking.orderId}/tracking`,
+        trackingForm,
+        { headers: { token } }
+      );
+
+      if (response.data.success) {
+        toast.success('Tracking added successfully');
+        loadOrderData();
+        setShowAddTrackingModal(false);
+      }
+    } catch (error) {
+      toast.error('Failed to add tracking');
       console.error(error);
     }
   };
@@ -81,7 +125,6 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
 
       if (response.data.success) {
         toast.success("Order canceled successfully!");
-        // Remove the canceled order from the local state
         setGroupedOrders((prevOrders) =>
           prevOrders.map((order) =>
             order.orderId === orderId ? { ...order, status: "canceled" } : order
@@ -100,53 +143,49 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
   };
 
   const initiateReturn = async (orderId, itemId) => {
-  try {
-    setLoadingReturnId(itemId);
-    
-    // First check if return is eligible
-    const response = await axios.get(
-      `${backendUrl}/api/returns/check-eligibility`,
-      {
-        params: { orderId, itemId },
-        headers: { token },
-      }
-    );
-    
-    if (response.data.eligible) {
-      // Navigate to return form page with item details
-      navigate(`/return-product/${orderId}/${itemId}`, { 
-        state: { 
-          orderDetails: {
-            ...response.data.orderDetails,
-            itemDetails: response.data.orderDetails.items.find(item => 
-              item._id.toString() === itemId || item.productId.toString() === itemId
-            ),
-            orderId: orderId
-          }
+    try {
+      setLoadingReturnId(itemId);
+      
+      const response = await axios.get(
+        `${backendUrl}/api/returns/check-eligibility`,
+        {
+          params: { orderId, itemId },
+          headers: { token },
         }
-      });
-    } else {
-      toast.error(
-        response.data.message || "This item is not eligible for return"
       );
+      
+      if (response.data.eligible) {
+        navigate(`/return-product/${orderId}/${itemId}`, { 
+          state: { 
+            orderDetails: {
+              ...response.data.orderDetails,
+              itemDetails: response.data.orderDetails.items.find(item => 
+                item._id.toString() === itemId || item.productId.toString() === itemId
+              ),
+              orderId: orderId
+            }
+          }
+        });
+      } else {
+        toast.error(
+          response.data.message || "This item is not eligible for return"
+        );
+      }
+    } catch (error) {
+      console.error("Error checking return eligibility:", error);
+      toast.error(
+        error.response?.data?.message || 
+        "Failed to initiate product return. Please try again."
+      );
+    } finally {
+      setLoadingReturnId(null);
     }
-  } catch (error) {
-    console.error("Error checking return eligibility:", error);
-    toast.error(
-      error.response?.data?.message || 
-      "Failed to initiate product return. Please try again."
-    );
-  } finally {
-    setLoadingReturnId(null);
-  }
-};
+  };
 
-  // In Orders.jsx, add a payNow function
   const payNow = async (orderId) => {
     try {
       setLoadingOrderId(orderId);
 
-      // Get payment methods available for this order
       const response = await axios.get(
         `${backendUrl}/api/order/${orderId}/payment`,
         {
@@ -154,7 +193,6 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
         }
       );
 
-      // Show payment method selection modal
       setPaymentMethods(response.data.paymentMethods);
       setSelectedOrderId(orderId);
       setShowPaymentModal(true);
@@ -166,6 +204,27 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
     }
   };
 
+  // Fetch tracking information
+  const getTrackingInfo = async (orderId) => {
+    try {
+      setLoadingTrackingId(orderId);
+      const response = await axios.get(
+        `${backendUrl}/api/order/${orderId}/tracking`,
+        { headers: { token } }
+      );
+
+      if (response.data.success) {
+        setTrackingInfo(response.data.tracking);
+        setShowTrackingModal(true);
+      }
+    } catch (error) {
+      console.error("Error fetching tracking info:", error);
+      toast.error("Failed to get tracking information");
+    } finally {
+      setLoadingTrackingId(null);
+    }
+  };
+
   const formatPrice = (price) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -173,11 +232,22 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
     }).format(price);
   };
 
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   useEffect(() => {
     loadOrderData();
+    fetchCarriers();
   }, [token, region]);
 
-  // Define tabs for different order statuses
   const tabs = [
     { id: "all", label: "All" },
     { id: "pending", label: "To Pay" },
@@ -186,22 +256,19 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
     { id: "shipped", label: "To Receive" },
     { id: "delivered", label: "Completed" },
     { id: "canceled", label: "Cancelled" },
-    { id: "returned", label: "Return Refund" },
   ];
 
-  // Filter orders based on active tab
   const getFilteredOrders = () => {
     if (activeTab === "all") {
       return groupedOrders;
-   } else if (activeTab === "pending") {
-  return groupedOrders.filter(
-    (order) =>
-      (!order.payment || order.status?.toLowerCase() === "pending") &&
-      order.paymentMethod?.toLowerCase() !== "cod" &&
-      order.status?.toLowerCase() !== "canceled"
-  );
-}
- else if (activeTab === "cod") {
+    } else if (activeTab === "pending") {
+      return groupedOrders.filter(
+        (order) =>
+          (!order.payment || order.status?.toLowerCase() === "pending") &&
+          order.paymentMethod?.toLowerCase() !== "cod" &&
+          order.status?.toLowerCase() !== "canceled"
+      );
+    } else if (activeTab === "cod") {
       return groupedOrders.filter(
         (order) =>
           order.paymentMethod?.toLowerCase() === "cod" &&
@@ -233,95 +300,6 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
 
   const filteredOrders = getFilteredOrders();
 
-  // Group orders by date
-  const groupOrdersByDate = (orders) => {
-    const groups = {};
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-
-    const lastWeekStart = new Date(today);
-    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-
-    const lastMonthStart = new Date(today);
-    lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
-
-    orders.forEach((order) => {
-      const orderDate = new Date(order.date);
-      orderDate.setHours(0, 0, 0, 0);
-
-      let groupKey;
-
-      if (orderDate.getTime() === today.getTime()) {
-        groupKey = "Today";
-      } else if (orderDate.getTime() === yesterday.getTime()) {
-        groupKey = "Yesterday";
-      } else if (orderDate >= lastWeekStart && orderDate < yesterday) {
-        groupKey = "This Week";
-      } else if (orderDate >= lastMonthStart && orderDate < lastWeekStart) {
-        groupKey = "This Month";
-      } else {
-        // Format as Month Year for older orders
-        groupKey = orderDate.toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        });
-      }
-
-      if (!groups[groupKey]) {
-        groups[groupKey] = [];
-      }
-
-      groups[groupKey].push(order);
-    });
-
-    return groups;
-  };
-
-  const ordersGroupedByDate = groupOrdersByDate(filteredOrders);
-
-  // Calculate days since delivery for return eligibility
-  const getDaysSinceDelivery = (deliveryDate) => {
-    if (!deliveryDate) return null;
-    const delivered = new Date(deliveryDate);
-    const today = new Date();
-    const diffTime = Math.abs(today - delivered);
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  };
-
-  // Check if an item is eligible for return (within 7 days of delivery)
-  const isEligibleForReturn = (order) => {
-    // If the order isn't delivered yet, it's not eligible for return
-    if (order.status?.toLowerCase() !== "delivered") return false;
-
-    // Get the delivery date (you might need to adjust this based on your data structure)
-    const deliveryDate = new Date(order.deliveredDate || order.date);
-    const daysSinceDelivery = getDaysSinceDelivery(deliveryDate);
-
-    // Returns are only eligible within 7 days of delivery
-    return daysSinceDelivery !== null && daysSinceDelivery <= 7;
-  };
-
-  // Check if order requires payment (only truly pending orders)
-  const needsPayment = (order) => {
-    const statusLower = order.status?.toLowerCase() || "";
-    const paymentMethod = order.paymentMethod?.toLowerCase() || "";
-
-    // Only show Pay Now for pending orders or orders without payment
-    // AND exclude any completed statuses (delivered, canceled, returned)
-    return (
-      (statusLower === "pending" || !order.payment) &&
-      paymentMethod !== "cash on delivery" &&
-      paymentMethod !== "cod" &&
-      statusLower !== "delivered" &&
-      statusLower !== "canceled" &&
-      statusLower !== "returned"
-    );
-  };
-
-  // Status style helper
   const getStatusStyle = (status) => {
     const statusLower = status?.toLowerCase();
     switch (statusLower) {
@@ -340,7 +318,6 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
     }
   };
 
-  // Get return status style
   const getReturnStatusStyle = (status) => {
     switch (status?.toLowerCase()) {
       case "approved":
@@ -352,6 +329,32 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
       default:
         return "text-gray-600 bg-gray-50 border-gray-200";
     }
+  };
+
+  const needsPayment = (order) => {
+    const statusLower = order.status?.toLowerCase() || "";
+    const paymentMethod = order.paymentMethod?.toLowerCase() || "";
+
+    return (
+      (statusLower === "pending" || !order.payment) &&
+      paymentMethod !== "cash on delivery" &&
+      paymentMethod !== "cod" &&
+      statusLower !== "delivered" &&
+      statusLower !== "canceled" &&
+      statusLower !== "returned"
+    );
+  };
+
+  const hasTracking = (order) => {
+    return order.tracking && order.tracking.trackingNumber;
+  };
+
+  const canAddTracking = (order) => {
+    return (
+      order.status?.toLowerCase() === "packing" ||
+      order.status?.toLowerCase() === "shipped" ||
+      order.status?.toLowerCase() === "out for delivery"
+    );
   };
 
   return (
@@ -429,7 +432,7 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
                     <div className={getStatusStyle(order.status)}>
                       {order.status}
                     </div>
-                    {order.paymentMethod?.toLowerCase() === "COD" && (
+                    {order.paymentMethod?.toLowerCase() === "cod" && (
                       <span className="mt-1 text-xs font-medium text-orange-500">
                         COD
                       </span>
@@ -475,7 +478,6 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
                               </div>
                             )}
 
-                          {/* Return Status Badge */}
                           {item.returnStatus &&
                             item.returnStatus !== "none" && (
                               <div className="mt-2">
@@ -530,7 +532,7 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex justify-end gap-3 mt-4">
+                  <div className="flex flex-wrap justify-end gap-3 mt-4">
                     {order.status?.toLowerCase() === "delivered" && (
                       <div className="flex flex-wrap gap-2">
                         {order.items.map((item) => (
@@ -543,46 +545,37 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
                             >
                               Review Product
                             </button>
-
-                            {/* Return Product Button - only if eligible and not already returned */}
-                           {isEligibleForReturn(order) &&
-  (!item.returnStatus || item.returnStatus === "none") && (
-    <button
-      className="flex items-center px-4 py-2 text-xs font-medium text-red-600 transition-colors bg-white border border-red-600 rounded hover:bg-red-50"
-      onClick={() => initiateReturn(order.orderId, item._id)}
-      disabled={loadingReturnId === item._id}
-    >
-      {loadingReturnId === item._id ? (
-        <>
-          <svg className="w-3 h-3 mr-1 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          Processing...
-        </>
-      ) : (
-        <>
-          <FiRotateCw className="mr-1" />
-          Return Product
-        </>
-      )}
-    </button>
-  )}
                           </div>
                         ))}
-                        {/* <button className="px-4 py-2 text-xs font-medium text-blue-600 transition-colors bg-white border border-blue-600 rounded hover:bg-blue-50">
-                          Buy Again
-                        </button> */}
                       </div>
                     )}
-{/* 
-                    {order.status?.toLowerCase() === "shipped" && (
-                      <button className="px-4 py-2 text-xs font-medium text-white transition-colors bg-green-600 rounded hover:bg-green-700">
-                        Track Order
-                      </button>
-                    )} */}
 
-                    {/* Modified Pay Now button condition using the needsPayment helper */}
+                    {/* Add Tracking Button - only for admin */}
+                    {token && token.role === "admin" && canAddTracking(order) && !hasTracking(order) && (
+                      <button
+                        onClick={() => {
+                          setSelectedOrderForTracking(order);
+                          setShowAddTrackingModal(true);
+                        }}
+                        className="flex items-center px-4 py-2 text-xs font-medium text-white transition-colors bg-green-600 rounded hover:bg-green-700"
+                      >
+                        <FiPlus className="mr-1" />
+                        Add Tracking
+                      </button>
+                    )}
+
+                    {/* Track Order Button - only if order has tracking */}
+                    {hasTracking(order) && (
+                      <button
+                        onClick={() => getTrackingInfo(order.orderId)}
+                        className="flex items-center px-4 py-2 text-xs font-medium text-white transition-colors bg-indigo-600 rounded hover:bg-indigo-700"
+                        disabled={loadingTrackingId === order.orderId}
+                      >
+                        <FiTruck className="mr-1" />
+                        {loadingTrackingId === order.orderId ? "Loading..." : "Track Order"}
+                      </button>
+                    )}
+
                     {needsPayment(order) && (
                       <button
                         onClick={() => payNow(order.orderId)}
@@ -623,6 +616,164 @@ const [selectedOrderId, setSelectedOrderId] = useState(null);
           </div>
         )}
       </div>
+
+      {/* Tracking Modal */}
+      {showTrackingModal && trackingInfo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="w-full max-w-md bg-white rounded-lg shadow-lg">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Order Tracking</h3>
+              <button
+                onClick={() => {
+                  setShowTrackingModal(false);
+                  setTrackingInfo(null);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <FiX className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">Tracking Number:</span>
+                  <span className="font-mono">{trackingInfo.trackingNumber}</span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-medium">Carrier:</span>
+                  <span>{trackingInfo.carrierCode}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">Status:</span>
+                  <span className="capitalize font-medium text-blue-600">
+                    {trackingInfo.status?.replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+
+              {trackingInfo.events?.length > 0 ? (
+                <div className="space-y-4">
+                  <h4 className="font-medium">Tracking History</h4>
+                  <div className="relative">
+                    <div className="absolute left-4 h-full w-0.5 bg-gray-200 -translate-x-1/2"></div>
+                    <div className="space-y-4">
+                      {trackingInfo.events.map((event, index) => (
+                        <div key={index} className="relative pl-8">
+                          <div className="absolute left-4 w-3 h-3 bg-blue-500 rounded-full -translate-x-1/2"></div>
+                          <div className="p-3 bg-gray-50 rounded-lg">
+                            <p className="font-medium">{event.description}</p>
+                            <p className="text-sm text-gray-500">
+                              <FiMapPin className="inline mr-1" />
+                              {event.location}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">
+                              {formatDate(event.timestamp)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4 text-gray-500">
+                  No tracking updates available yet
+                </div>
+              )}
+
+              <div className="mt-6">
+                <a
+                  href={trackingInfo.trackingUrl || `https://trackingmore.com/tracking.php?nums=${trackingInfo.trackingNumber}&courier=${trackingInfo.carrierCode}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full px-4 py-2 text-center text-white bg-blue-600 rounded hover:bg-blue-700"
+                >
+                  View Full Tracking Details
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Tracking Modal */}
+      {showAddTrackingModal && selectedOrderForTracking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="w-full max-w-md bg-white rounded-lg shadow-lg">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Add Tracking Information</h3>
+              <button
+                onClick={() => {
+                  setShowAddTrackingModal(false);
+                  setSelectedOrderForTracking(null);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <FiX className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-4">
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  Carrier
+                </label>
+                <select
+                  className="w-full p-2 border border-gray-300 rounded"
+                  value={trackingForm.carrierCode}
+                  onChange={(e) => setTrackingForm({
+                    ...trackingForm,
+                    carrierCode: e.target.value
+                  })}
+                >
+                  <option value="">Select Carrier</option>
+                  {carriers.map((carrier) => (
+                    <option key={carrier.code} value={carrier.code}>
+                      {carrier.name} ({carrier.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="mb-6">
+                <label className="block mb-2 text-sm font-medium text-gray-700">
+                  Tracking Number
+                </label>
+                <input
+                  type="text"
+                  className="w-full p-2 border border-gray-300 rounded"
+                  value={trackingForm.trackingNumber}
+                  onChange={(e) => setTrackingForm({
+                    ...trackingForm,
+                    trackingNumber: e.target.value
+                  })}
+                  placeholder="Enter tracking number"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowAddTrackingModal(false);
+                    setSelectedOrderForTracking(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 transition-colors border border-gray-300 rounded hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={addTracking}
+                  className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded hover:bg-blue-700"
+                  disabled={!trackingForm.carrierCode || !trackingForm.trackingNumber}
+                >
+                  Add Tracking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
