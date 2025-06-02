@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import '../css/hero.css';  // Your CSS file
+import '../css/hero.css';
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const Hero = () => {
@@ -17,7 +17,8 @@ const Hero = () => {
             title: data.title,
             subtitle: data.subtitle,
             type: data.type || 'image',
-            image: data.image ? `${backendUrl}${data.image}` : null,
+            image: data.image?.startsWith('http') ? data.image : `${backendUrl}${data.image}`,
+
             video: data.video ? `${backendUrl}${data.video}` : null,
           });
         }
