@@ -36,6 +36,8 @@ const Product = () => {
   const [finalPrice, setFinalPrice] = useState(0);
   const [availableQuantity, setAvailableQuantity] = useState(0);
   const [activeVariationName, setActiveVariationName] = useState(null);
+ 
+
   const { search } = useLocation();
   const showReviewForm = new URLSearchParams(search).get("review") === "true";
 
