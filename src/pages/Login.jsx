@@ -420,6 +420,8 @@ const Login = () => {
         return false;
       }
     }
+
+    
     // Forgot Password validation
     else if (currentState === "Forgot Password") {
       if (!formData.email) {
@@ -431,58 +433,73 @@ const Login = () => {
         return false;
       }
     }
+    // Add before the axios.post call in handleSubmit
+console.log('Sending login data:', {
+  email: formData.email,
+  password: formData.password,
+  captcha: captchaValue
+});
 
     return true;
   };
 
   // Show a friendly message with potential solutions based on error
-  const handleAuthError = (error) => {
-    console.error("Authentication error:", error);
+ // Add this temporarily to your handleAuthError function to see the exact server response
+const handleAuthError = (error) => {
+  console.error("Authentication error:", error);
+  
+  // ADD THESE DEBUG LINES:
+  console.log("=== DEBUG ERROR DETAILS ===");
+  console.log("Status:", error.response?.status);
+  console.log("Response data:", error.response?.data);
+  console.log("Response headers:", error.response?.headers);
+  console.log("Error message from server:", error.response?.data?.message);
+  console.log("============================");
 
-    // Extract relevant error information
-    const errorResponse = error.response;
-    const errorStatus = errorResponse?.status;
-    const errorMessage = errorResponse?.data?.message;
+  // Extract relevant error information
+  const errorResponse = error.response;
+  const errorStatus = errorResponse?.status;
+  const errorMessage = errorResponse?.data?.message;
 
-    // Handle specific known error cases with helpful messages
-    if (errorStatus === 401) {
+  // Handle specific known error cases with helpful messages
+  if (errorStatus === 401) {
+    toast.error(
+      "Invalid email or password. Please check your credentials and try again."
+    );
+  } else if (errorStatus === 403) {
+    toast.error(
+      "Your account is locked. Please contact customer support for assistance."
+    );
+  } else if (errorStatus === 404 && currentState === "Login") {
+    toast.error(
+      "We couldn't find an account with that email. Please check your email or create a new account."
+    );
+  } else if (errorStatus === 429) {
+    toast.error(
+      "Too many login attempts. Please try again after a few minutes."
+    );
+  } else if (errorMessage && errorMessage.toLowerCase().includes("captcha")) {
+    toast.error("CAPTCHA verification failed. Please try again.");
+  } else if (errorMessage && errorMessage.toLowerCase().includes("network")) {
+    toast.error(
+      "Connection issue detected. Please check your internet connection and try again."
+    );
+  } else if (errorResponse?.data?.errors) {
+    // Handle specific field validation errors
+    const serverErrors = errorResponse.data.errors;
+    Object.entries(serverErrors).forEach(([field, message]) => {
       toast.error(
-        "Invalid email or password. Please check your credentials and try again."
+        `${field.charAt(0).toUpperCase() + field.slice(1)}: ${message}`
       );
-    } else if (errorStatus === 403) {
-      toast.error(
-        "Your account is locked. Please contact customer support for assistance."
-      );
-    } else if (errorStatus === 404 && currentState === "Login") {
-      toast.error(
-        "We couldn't find an account with that email. Please check your email or create a new account."
-      );
-    } else if (errorStatus === 429) {
-      toast.error(
-        "Too many login attempts. Please try again after a few minutes."
-      );
-    } else if (errorMessage && errorMessage.toLowerCase().includes("captcha")) {
-      toast.error("CAPTCHA verification failed. Please try again.");
-    } else if (errorMessage && errorMessage.toLowerCase().includes("network")) {
-      toast.error(
-        "Connection issue detected. Please check your internet connection and try again."
-      );
-    } else if (errorResponse?.data?.errors) {
-      // Handle specific field validation errors
-      const serverErrors = errorResponse.data.errors;
-      Object.entries(serverErrors).forEach(([field, message]) => {
-        toast.error(
-          `${field.charAt(0).toUpperCase() + field.slice(1)}: ${message}`
-        );
-      });
-    } else {
-      // Generic error message as fallback
-      toast.error(
-        errorMessage ||
-          "Unable to process your request. Please try again in a few moments."
-      );
-    }
-  };
+    });
+  } else {
+    // Generic error message as fallback
+    toast.error(
+      errorMessage ||
+        "Unable to process your request. Please try again in a few moments."
+    );
+  }
+};
 
   // Main form submit handler
   const handleSubmit = async (event) => {
