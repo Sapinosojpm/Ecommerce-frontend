@@ -20,16 +20,19 @@ export default function Cursor() {
     const handleMouseUp = () => setIsClicking(false);
 
     const handleMouseEnter = (e) => {
-      if (e.target.matches('a, button, [role="button"], input, textarea, select')) {
-        setIsHovered(true);
-      }
-    };
+  if (e.target instanceof Element && e.target.matches('a, button, [role="button"], input, textarea, select')) {
+    setIsHovered(true);
+  }
+};
 
-    const handleMouseLeave = (e) => {
-      if (e.target.matches('a, button, [role="button"], input, textarea, select')) {
-        setIsHovered(false);
-      }
-    };
+const handleMouseLeave = (e) => {
+  if (e.target instanceof Element && e.target.matches('a, button, [role="button"], input, textarea, select')) {
+    setIsHovered(false);
+  }
+};
+
+
+    
 
     window.addEventListener('mousemove', move);
     window.addEventListener('mousedown', handleMouseDown);

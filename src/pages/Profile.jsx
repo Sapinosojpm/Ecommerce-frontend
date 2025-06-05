@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Lenis from "lenis";
+import { Camera, Edit3, Save, X, User, MapPin, Mail, Phone, Upload } from "lucide-react";
 import addressData from "../data/Philippines.json";
 
 const Profile = () => {
@@ -17,6 +18,7 @@ const Profile = () => {
     province: "",
     region: "",
     postalCode: "",
+    profilePicture: null,
   });
 
   const [formData, setFormData] = useState(userDetails);
@@ -24,6 +26,9 @@ const Profile = () => {
   const [error, setError] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [activeSection, setActiveSection] = useState("personal");
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Dropdown states
   const [region, setRegion] = useState([]);
@@ -159,7 +164,84 @@ const Profile = () => {
       updateDropdowns(userDetails);
     }
   }, [userDetails]);
-  
+
+  // Handle image upload
+ const handleImageUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  // Validate file type
+  if (!file.type.startsWith('image/')) {
+    setError('Please select a valid image file');
+    return;
+  }
+
+  // Validate file size (5MB limit)
+  if (file.size > 5 * 1024 * 1024) {
+    setError('Image size should be less than 5MB');
+    return;
+  }
+
+  setUploadingImage(true);
+  setError('');
+
+  try {
+    // Create preview
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+
+    // Upload to backend
+    const formDataUpload = new FormData();
+    formDataUpload.append('profilePicture', file);
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error('Authentication token missing');
+    }
+
+    const response = await fetch(`${backendUrl}/api/profile/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`, // use standard Bearer token
+      },
+      body: formDataUpload,
+    });
+
+    if (!response.ok) {
+      // Try parse JSON error, fallback to default
+      let errorMessage = 'Failed to upload image';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch {
+        // Not JSON error response
+      }
+      throw new Error(errorMessage);
+    }
+
+    const result = await response.json();
+    setFormData(prev => ({ ...prev, profilePicture: result.profilePictureUrl }));
+    setUserDetails(prev => ({ ...prev, profilePicture: result.profilePictureUrl }));
+    toast.success('Profile picture updated successfully!', {
+      position: 'top-right',
+      autoClose: 3000,
+    });
+
+  } catch (error) {
+    console.error('Image upload error:', error);
+    setError(error.message);
+    toast.error(error.message || 'Failed to upload image. Please try again.', {
+      position: 'top-right',
+      autoClose: 3000,
+    });
+  } finally {
+    setUploadingImage(false);
+  }
+};
+
   // Handle form input change
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -229,6 +311,7 @@ const Profile = () => {
       setUserDetails(result);
       setFormData(result);
       setEditMode(false);
+      setImagePreview(null);
   
       toast.success("Profile updated successfully!", { position: "top-right", autoClose: 3000 });
   
@@ -254,7 +337,13 @@ const Profile = () => {
       case "personal":
         return (
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-gray-800">Personal Information</h2>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg">
+                <User className="w-5 h-5 text-blue-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800">Personal Information</h2>
+            </div>
+            
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">First Name</label>
@@ -265,7 +354,7 @@ const Profile = () => {
                   onChange={handleInputChange} 
                   placeholder="First Name" 
                   disabled={!editMode} 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 />
               </div>
               <div className="space-y-2">
@@ -277,33 +366,40 @@ const Profile = () => {
                   onChange={handleInputChange} 
                   placeholder="Last Name" 
                   disabled={!editMode} 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
                 />
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Email</label>
-                <input 
-                  type="email" 
-                  name="email" 
-                  value={formData.email} 
-                  onChange={handleInputChange} 
-                  placeholder="Email" 
-                  disabled 
-                  className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-lg" 
-                />
+                <div className="relative">
+                  <Mail className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+                  <input 
+                    type="email" 
+                    name="email" 
+                    value={formData.email} 
+                    onChange={handleInputChange} 
+                    placeholder="Email" 
+                    disabled 
+                    className="w-full py-3 pr-4 bg-gray-100 border border-gray-300 rounded-lg cursor-not-allowed pl-11" 
+                  />
+                </div>
+                <p className="text-xs text-gray-500">Email cannot be changed</p>
               </div>
               <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Phone Number</label>
-                <input 
-                  type="text" 
-                  name="phone" 
-                  value={formData.phone} 
-                  onChange={handleInputChange} 
-                  placeholder="Phone Number" 
-                  disabled={!editMode} 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                  required
-                />
+                <div className="relative">
+                  <Phone className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+                  <input 
+                    type="text" 
+                    name="phone" 
+                    value={formData.phone} 
+                    onChange={handleInputChange} 
+                    placeholder="Phone Number" 
+                    disabled={!editMode} 
+                    className="w-full py-3 pr-4 transition-colors border border-gray-300 rounded-lg pl-11 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500" 
+                    required
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -312,7 +408,13 @@ const Profile = () => {
       case "address":
         return (
           <div className="space-y-6">
-            <h2 className="text-xl font-semibold text-gray-800">Address Information</h2>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-lg">
+                <MapPin className="w-5 h-5 text-green-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-800">Address Information</h2>
+            </div>
+            
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">Street Address</label>
               <input 
@@ -322,7 +424,7 @@ const Profile = () => {
                 onChange={handleInputChange} 
                 placeholder="Street Address" 
                 disabled={!editMode} 
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
                 required
               />
             </div>
@@ -335,7 +437,7 @@ const Profile = () => {
                   value={String(formData.region)}
                   onChange={handleInputChange}
                   disabled={!editMode}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500" 
                   required
                 >
                   <option value="">Select Region</option>
@@ -354,7 +456,7 @@ const Profile = () => {
                   value={formData.province} 
                   onChange={handleInputChange} 
                   disabled={!editMode || !formData.region} 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
                   required
                 >
                   <option value="">Select Province</option>
@@ -373,7 +475,7 @@ const Profile = () => {
                   value={formData.city} 
                   onChange={handleInputChange} 
                   disabled={!editMode || !formData.province} 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
                   required
                 >
                   <option value="">Select City/Municipality</option>
@@ -392,7 +494,7 @@ const Profile = () => {
                   value={formData.barangay} 
                   onChange={handleInputChange} 
                   disabled={!editMode || !formData.city} 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
                   required
                 >
                   <option value="">Select Barangay</option>
@@ -404,7 +506,7 @@ const Profile = () => {
                 </select>
               </div>
               
-              <div className="space-y-2 md:col-span-1">
+              <div className="space-y-2">
                 <label className="block text-sm font-medium text-gray-700">Postal Code</label>
                 <input 
                   type="text" 
@@ -413,7 +515,7 @@ const Profile = () => {
                   onChange={handleInputChange} 
                   placeholder="Postal Code" 
                   disabled={!editMode} 
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-3 transition-colors border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 disabled:bg-gray-50 disabled:text-gray-500"
                   required
                 />
               </div>
@@ -430,30 +532,83 @@ const Profile = () => {
     <div className="max-w-4xl p-6 mx-auto my-10 mt-24 bg-white shadow-lg rounded-xl">
       {/* Loading and Error States */}
       {loading && (
-        <div className="flex items-center justify-center h-32">
-          <div className="w-12 h-12 border-4 border-t-4 border-gray-200 rounded-full border-t-blue-500 animate-spin"></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="flex flex-col items-center p-8 bg-white shadow-2xl rounded-2xl">
+            <div className="w-12 h-12 mb-4 border-4 border-t-4 border-gray-200 rounded-full border-t-blue-500 animate-spin"></div>
+            <p className="text-gray-600">Updating profile...</p>
+          </div>
         </div>
       )}
       
       {error && (
         <div className="p-4 mb-6 text-red-700 bg-red-100 border-l-4 border-red-500 rounded-lg">
-          <p className="font-medium">Error: {error}</p>
+          <div className="flex items-center">
+            <X className="w-5 h-5 mr-3" />
+            <p className="font-medium">Error: {error}</p>
+          </div>
         </div>
       )}
       
       {!loading && !error && (
         <>
           {/* Profile Header */}
-         <div className="flex flex-col pb-6 mb-6 border-b md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col pb-6 mb-6 border-b md:flex-row md:items-center md:justify-between">
             <div className="flex items-center mb-4 md:mb-0">
-              <div className="flex items-center justify-center w-16 h-16 mr-4 text-xl font-bold text-white bg-blue-600 rounded-full">
-                {getInitials()}
+              {/* Profile Picture with Upload */}
+              <div className="relative mr-4">
+                <div className="relative">
+                  {formData.profilePicture || imagePreview ? (
+                    <img 
+                      src={imagePreview || formData.profilePicture} 
+                      alt="Profile" 
+                      className="object-cover w-20 h-20 border-4 border-gray-200 rounded-full shadow-sm"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center w-20 h-20 text-xl font-bold text-white border-4 border-gray-200 rounded-full shadow-sm bg-gradient-to-br from-blue-500 to-blue-600">
+                      {getInitials()}
+                    </div>
+                  )}
+                  
+                  {editMode && (
+                    <div className="absolute -bottom-1 -right-1">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="flex items-center justify-center w-8 h-8 text-white transition-colors duration-200 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700"
+                        title="Upload profile picture"
+                      >
+                        {uploadingImage ? (
+                          <div className="w-4 h-4 border-2 border-white rounded-full border-t-transparent animate-spin"></div>
+                        ) : (
+                          <Camera className="w-4 h-4" />
+                        )}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="hidden"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
+              
               <div>
                 <h1 className="text-2xl font-bold text-gray-800">
                   {formData.firstName} {formData.lastName}
                 </h1>
-                <p className="text-sm text-gray-500">{formData.email}</p>
+                <p className="flex items-center mt-1 text-sm text-gray-500">
+                  <Mail className="w-4 h-4 mr-1" />
+                  {formData.email}
+                </p>
+                {formData.phone && (
+                  <p className="flex items-center mt-1 text-sm text-gray-500">
+                    <Phone className="w-4 h-4 mr-1" />
+                    {formData.phone}
+                  </p>
+                )}
               </div>
             </div>
             
@@ -461,8 +616,9 @@ const Profile = () => {
               {!editMode ? (
                 <button 
                   onClick={() => setEditMode(true)} 
-                  className="px-6 py-2 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                  className="flex items-center gap-2 px-6 py-2 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                 >
+                  <Edit3 className="w-4 h-4" />
                   Edit Profile
                 </button>
               ) : (
@@ -472,20 +628,24 @@ const Profile = () => {
                     onClick={() => {
                       setFormData(userDetails);
                       setEditMode(false);
+                      setImagePreview(null);
+                      setError("");
                     }}
-                    className="px-4 py-2 text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                    className="flex items-center gap-2 px-4 py-2 text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
                   >
+                    <X className="w-4 h-4" />
                     Cancel
                   </button>
                   <button
                     onClick={handleSubmit}
                     disabled={JSON.stringify(userDetails) === JSON.stringify(formData)}
-                    className={`px-4 py-2 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                       JSON.stringify(userDetails) === JSON.stringify(formData)
                         ? "bg-gray-400 cursor-not-allowed"
                         : "bg-green-600 hover:bg-green-700 focus:ring-green-500"
                     }`}
                   >
+                    <Save className="w-4 h-4" />
                     Save Changes
                   </button>
                 </div>
@@ -497,30 +657,32 @@ const Profile = () => {
           <div className="flex mb-6 border-b">
             <button
               onClick={() => setActiveSection("personal")}
-              className={`px-4 py-3 font-medium ${
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
                 activeSection === "personal"
                   ? "text-blue-600 border-b-2 border-blue-600"
                   : "text-gray-600 hover:text-blue-500"
               }`}
             >
+              <User className="w-4 h-4" />
               Personal Information
             </button>
             <button
               onClick={() => setActiveSection("address")}
-              className={`px-4 py-3 font-medium ${
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
                 activeSection === "address"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:text-blue-500"
+                  ? "text-green-600 border-b-2 border-green-600"
+                  : "text-gray-600 hover:text-green-500"
               }`}
             >
+              <MapPin className="w-4 h-4" />
               Address
             </button>
           </div>
           
           {/* Form Content */}
-          <form className="mb-6" onSubmit={handleSubmit}>
+          <div className="mb-6">
             {renderFormFields()}
-          </form>
+          </div>
         </>
       )}
     </div>
