@@ -12,9 +12,8 @@ import WishlistIcon from "../components/WishlistIcon";
 import Lenis from "@studio-freight/lenis";
 import { Lens } from "../components/Lens";
 import Review from "../components/ProductReview";
-import ProductAdsDisplay from "../components/ProductsAdsDisplay";
+import axios from "axios";
 import { useSocket } from "../context/SocketContext";
-
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const Product = () => {
@@ -36,7 +35,8 @@ const Product = () => {
   const [finalPrice, setFinalPrice] = useState(0);
   const [availableQuantity, setAvailableQuantity] = useState(0);
   const [activeVariationName, setActiveVariationName] = useState(null);
- 
+  const [ads, setAds] = useState([]);
+  const [isLoadingAds, setIsLoadingAds] = useState(true);
 
   const { search } = useLocation();
   const showReviewForm = new URLSearchParams(search).get("review") === "true";
@@ -44,6 +44,22 @@ const Product = () => {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // Fetch ads data
+  useEffect(() => {
+    const fetchAds = async () => {
+      try {
+        const response = await axios.get(`${backendUrl}/api/ads`);
+        setAds(response.data.filter(ad => ad.isActive));
+      } catch (error) {
+        console.error("Error fetching ads:", error);
+      } finally {
+        setIsLoadingAds(false);
+      }
+    };
+    
+    fetchAds();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(refreshProductData, 30000);
@@ -375,7 +391,6 @@ const Product = () => {
     const defaultVariations = {};
     productData.variations.forEach((variation) => {
       if (variation.options.length > 0) {
-        // Find first in-stock option or fall back to first option
         const firstInStock =
           variation.options.find((opt) => opt.quantity > 0) ||
           variation.options[0];
@@ -727,7 +742,98 @@ const Product = () => {
 
         <div className="hidden lg:block lg:w-1/3 lg:pl-8">
           <div className="sticky top-4">
-            <ProductAdsDisplay />
+            {isLoadingAds ? (
+              <div className="space-y-4">
+                {[...Array(3)].map((_, index) => (
+                  <div key={index} className="w-full h-48 bg-gray-200 rounded-lg animate-pulse"></div>
+                ))}
+              </div>
+            ) : ads.length > 0 ? (
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold text-gray-800">Sponsored Products</h3>
+                {ads.slice(0, 3).map((ad) => (
+                  <div 
+                    key={ad._id}
+                    className="relative p-4 transition-all duration-300 border border-gray-200 rounded-lg shadow-sm hover:shadow-md hover:border-blue-200 group"
+                    onClick={() => {
+                      console.log(`Ad clicked: ${ad._id}`);
+                      if (ad.link) {
+                        window.open(ad.link, '_blank', 'noopener,noreferrer');
+                      }
+                    }}
+                  >
+                    {/* Ad Badge */}
+                    <div className="absolute top-2 right-2">
+                      <span className="px-2 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
+                        Sponsored
+                      </span>
+                    </div>
+                    
+                    {/* Ad Content */}
+                    <div className="flex gap-4">
+                      <div className="flex-shrink-0 w-24 h-24 overflow-hidden rounded-lg">
+                        {ad.video ? (
+                          <video 
+                            className="object-cover w-full h-full"
+                            autoPlay
+                            loop
+                            muted
+                            playsInline
+                          >
+                            <source src={ad.video} type="video/mp4" />
+                          </video>
+                        ) : (
+                          <img
+                            src={ad.imageUrl}
+                            alt={ad.title || "Advertisement"}
+                            className="object-cover w-full h-full"
+                            onError={(e) => {
+                              e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f3f4f6'/%3E%3Ctext x='100' y='100' text-anchor='middle' fill='%236b7280' font-family='Arial' font-size='16'%3EAd%3C/text%3E%3C/svg%3E";
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium text-gray-900 transition-colors line-clamp-2 group-hover:text-blue-600">
+                          {ad.title || "Special Offer"}
+                        </h4>
+                        <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+                          {ad.description || "Check out this amazing offer!"}
+                        </p>
+                        {ad.price && (
+                          <div className="mt-2">
+                            {ad.discount ? (
+                              <>
+                                <span className="font-semibold text-red-600">
+                                  ${(ad.price * (1 - ad.discount / 100)).toFixed(2)}
+                                </span>
+                                <span className="ml-2 text-sm text-gray-500 line-through">
+                                  ${ad.price.toFixed(2)}
+                                </span>
+                                <span className="ml-2 text-xs text-red-500">
+                                  {ad.discount}% OFF
+                                </span>
+                              </>
+                            ) : (
+                              <span className="font-semibold text-blue-600">
+                                ${ad.price.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        <button className="mt-3 text-sm font-medium text-blue-600 transition-colors hover:text-blue-800">
+                          {ad.cta || "Shop Now"} →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-gray-500 bg-gray-100 rounded-lg">
+                No sponsored products available
+              </div>
+            )}
           </div>
         </div>
       </div>

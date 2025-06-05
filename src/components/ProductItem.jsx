@@ -14,19 +14,20 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
     image: Array.isArray(image) ? image[0] : image,
     video: video || "",
     description: description || "",
-    
   });
   const [hovered, setHovered] = useState(false);
   const videoRef = useRef(null);
 
   const scaleEffect = useSpring({
-    transform: hovered ? "scale(1.05)" : "scale(1)",
-    config: { tension: 200, friction: 15 },
+    transform: hovered ? "scale(1.02)" : "scale(1)",
+    config: { tension: 280, friction: 20 },
   });
 
   const shadowEffect = useSpring({
-    boxShadow: hovered ? "0 10px 20px rgba(0, 0, 0, 0.2)" : "0 5px 10px rgba(0, 0, 0, 0.1)",
-    config: { tension: 200, friction: 15 },
+    boxShadow: hovered 
+      ? "0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(8, 131, 149, 0.1)" 
+      : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+    config: { tension: 280, friction: 20 },
   });
 
   useEffect(() => {
@@ -87,34 +88,33 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
 
   return (
     <animated.div
-      className="relative flex flex-col h-full transition-shadow duration-300 border rounded-lg shadow-md bg-[FDFAF6#] border-gray-150 hover:shadow-xl"
+      className="group relative flex flex-col h-full transition-all duration-500 bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-[#088395]/20"
       style={{ ...scaleEffect, ...shadowEffect }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-     {productData.discount && (
-      <div className="absolute top-0 z-10 w-24 h-24 overflow-hidden left-1">
-        <div className="absolute w-48 p-1 text-xs font-bold text-center text-white uppercase transform -rotate-45 bg-red-500 shadow-md -left-20 top-4">
-          Sale
+      {/* Sale Badge */}
+      {productData.discount && (
+        <div className="absolute z-20 top-4 left-4">
+          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg backdrop-blur-sm">
+            -{productData.discount}% OFF
+          </div>
         </div>
-      </div>
-    )}
+      )}
 
-
+      {/* Product Image/Video Section */}
       <Link
-        className="block text-gray-800 cursor-pointer"
+        className="block cursor-pointer"
         to={`/product/${id}`}
         onClick={scrollToTop}
       >
-        <animated.div
-          className="m-5 overflow-hidden bg-white border rounded-t-lg border-gray-50"
-          style={useSpring({ opacity: 1, y: 0, from: { opacity: 0, y: 20 } })}
-        >
+        <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
           <div className="relative aspect-square">
+            {/* Video Overlay */}
             {productData.video && (
               <video
                 ref={videoRef}
-                className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-500 ${
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ease-in-out ${
                   hovered ? 'opacity-100 z-10' : 'opacity-0'
                 }`}
                 muted
@@ -126,62 +126,106 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
               </video>
             )}
             
-            <img
-              className={`w-full h-full object-cover transition-opacity duration-500 ${
-                hovered && productData.video ? 'opacity-0' : 'opacity-100'
-              }`}
-              src={productData.image}
-              alt={name}
-              loading="lazy"
-            />
+            {/* Main Product Image */}
+            <div className="relative w-full h-full overflow-hidden">
+              <img
+                className={`w-full h-full object-cover transition-all duration-700 ease-in-out transform ${
+                  hovered && productData.video ? 'opacity-0 scale-105' : 'opacity-100 scale-100'
+                } group-hover:scale-105`}
+                src={productData.image}
+                alt={name}
+                loading="lazy"
+              />
+              
+              {/* Gradient Overlay on Hover */}
+              <div className={`absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent transition-opacity duration-500 ${
+                hovered ? 'opacity-100' : 'opacity-0'
+              }`} />
+            </div>
+
+            {/* Play Icon for Video */}
+            {productData.video && !hovered && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="p-3 transition-transform duration-300 transform rounded-full shadow-lg bg-white/90 backdrop-blur-sm group-hover:scale-110">
+                  <svg className="w-6 h-6 text-gray-700" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M8 5v14l11-7z"/>
+                  </svg>
+                </div>
+              </div>
+            )}
           </div>
-        </animated.div>
+        </div>
       </Link>
 
-      <div className="flex-grow">
-        <p className="m-5 text-lg font-bold text-gray-700 truncate">{name}</p>
-        <p className="m-5 text-lg text-gray-600">
+      {/* Product Information */}
+      <div className="flex-grow p-6 space-y-4">
+        {/* Product Name */}
+        <h3 className="text-lg font-bold text-gray-900 leading-tight line-clamp-2 group-hover:text-[#088395] transition-colors duration-300">
+          {name}
+        </h3>
+        
+        {/* Product Description */}
+        <p className="text-sm leading-relaxed text-gray-600 line-clamp-2">
           {truncateDescription(productData.description, getMaxLength())}
         </p>
-      </div>
 
-      <div className="flex items-center justify-between px-4 py-2 mt-auto space-x-2">
-        <div className="gap-2 font-semibold text-md">
-          {productData.discount ? (
-            <div>
-              <span className="text-red-600">
-                {currency}
-                {finalPrice.toLocaleString()}
+        {/* Price Section */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center space-x-2">
+            {productData.discount ? (
+              <div className="flex items-center space-x-2">
+                <span className="text-xl font-bold text-[#088395]">
+                  {currency}{finalPrice.toLocaleString()}
+                </span>
+                <span className="text-sm font-medium text-gray-400 line-through">
+                  {currency}{price.toLocaleString()}
+                </span>
+              </div>
+            ) : (
+              <span className="text-xl font-bold text-gray-900">
+                {currency}{price.toLocaleString()}
               </span>
-              <span className="ml-2 text-sm text-gray-500 line-through">
-                {currency}
-                {price.toLocaleString()}
-              </span>
+            )}
+          </div>
+          
+          {/* Stock Indicator */}
+          {quantity <= 5 && quantity > 0 && (
+            <div className="px-2 py-1 text-xs font-medium text-orange-700 bg-orange-100 rounded-full">
+              {quantity} left
             </div>
-          ) : (
-            <span className="text-black">
-              {currency}
-              {price.toLocaleString()}
-            </span>
           )}
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 p-4">
+      {/* Action Button */}
+      <div className="p-6 pt-0">
         <Link
-  to={`/product/${id}`}
-  className="hidden sm:block relative w-full py-3 overflow-hidden text-center text-white transition-all duration-300 bg-[#088395] rounded- group hover:bg-black"
->
-
-          <span className="absolute transition-all duration-300 ease-in-out -translate-x-1/2 -translate-y-1/2 opacity-100 left-1/2 top-1/2 group-hover:translate-x-full group-hover:opacity-0">
-            View Details
-          </span>
-          <span className="absolute left-0 transition-all duration-300 ease-in-out -translate-x-full -translate-y-1/2 opacity-0 top-1/2 group-hover:opacity-100 group-hover:translate-x-0 group-hover:left-1/2">
-            ➜
+          to={`/product/${id}`}
+          className="group/btn relative w-full py-4 overflow-hidden text-center font-semibold text-white transition-all duration-500 bg-gradient-to-r from-[#088395] to-[#0a9bb0] rounded-xl hover:from-[#066b7a] hover:to-[#088395] shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
+        >
+          <div className="absolute inset-0 transition-transform duration-700 transform -translate-x-full -skew-x-12 bg-white/20 group-hover/btn:translate-x-full"></div>
+          
+          <span className="relative flex items-center justify-center space-x-2">
+            <span className="transition-all duration-300 group-hover/btn:tracking-wide">
+              View Details
+            </span>
+            <svg 
+              className="w-5 h-5 transition-transform duration-300 transform group-hover/btn:translate-x-1" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+            </svg>
           </span>
         </Link>
+      </div>
 
-  
+      {/* Hover Glow Effect */}
+      <div className={`absolute inset-0 rounded-2xl transition-opacity duration-500 pointer-events-none ${
+        hovered ? 'opacity-100' : 'opacity-0'
+      }`}>
+        <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#088395]/5 to-transparent"></div>
       </div>
     </animated.div>
   );
