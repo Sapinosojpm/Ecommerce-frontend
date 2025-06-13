@@ -41,7 +41,7 @@ import { useState } from "react";
 import ResetPassword from "./components/ResetPassword";
 import TokenDiagnostic from "./components/TokenDiagnostic";
 import ReturnProduct from "./components/returnProduct";
-import Cursor from "./components/Cursor";
+// import Cursor from "./components/Cursor";
 function App() {
   const [isLiveActive, setIsLiveActive] = useState(true); // Optional: Use your socket for real status
   const [isMaximized, setIsMaximized] = useState(false);
@@ -58,7 +58,7 @@ function App() {
               <ToastContainer />
               <Navbar />
               <SearchBar />
-              <Cursor />
+              {/* <Cursor /> */}
               <PopupManager />
               {isLiveActive && !isMaximized && (
                 <LiveStreamPopup onMaximize={() => setIsMaximized(true)} />

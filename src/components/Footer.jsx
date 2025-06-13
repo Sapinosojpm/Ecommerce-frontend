@@ -27,19 +27,21 @@ const Footer = () => {
     fetchFooterData();
   }, []);
 
-  useEffect(() => {
-    const fetchLogo = async () => {
-      try {
-        const res = await fetch(`${backendUrl}/api/logo`);
-        const data = await res.json();
-        setLogo(`${backendUrl}${data.imageUrl}`);
-      } catch (error) {
-        console.error("Error fetching logo:", error);
-      }
-    };
+useEffect(() => {
+  const fetchLogo = async () => {
+    try {
+      const res = await fetch(`${backendUrl}/api/logo`);
+      const data = await res.json();
+      console.log("Cloudinary logo URL:", data.imageUrl); // ✅ Debug
+      setLogo(data.imageUrl); // Don't prepend backendUrl
+    } catch (error) {
+      console.error("Error fetching logo:", error);
+    }
+  };
 
-    fetchLogo();
-  }, []);
+  fetchLogo();
+}, []);
+
 
   return (
     <footer className="mt-16 border-t border-gray-200 bg-gray-50">

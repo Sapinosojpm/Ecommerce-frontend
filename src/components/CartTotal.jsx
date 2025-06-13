@@ -19,13 +19,22 @@ const CartTotal = () => {
     getCartItemsWithDetails,
     voucherAmountDiscount,
     setVoucherAmountDiscount,
-    buyNowItem, // Add buyNowItem from context
+    buyNowItem,
   } = useContext(ShopContext);
 
   const [voucher, setVoucher] = useState("");
   const [loading, setLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [claimedVouchers, setClaimedVouchers] = useState([]);
+
+  // Calculate cart amount
+  const cartAmount = getCartAmount();
+
+  // Calculate discount amount
+  const discountAmount = getDiscountAmount();
+
+  // Calculate total amount
+  const totalAmount = getTotalAmount();
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -64,10 +73,6 @@ const CartTotal = () => {
 
     fetchClaimedVouchers();
   }, []);
-
-  const cartAmount = getCartAmount();
-  const discountAmount = getDiscountAmount();
-  const totalAmount = getTotalAmount();
 
   const validateVoucher = async (code) => {
     if (!code.trim()) return;
@@ -185,7 +190,6 @@ const CartTotal = () => {
                     (buyNowItem.discount || 0)) /
                     100
                 ).toLocaleString()}
-              
               </p>
             </div>
           </>
@@ -195,7 +199,7 @@ const CartTotal = () => {
               <p>Subtotal</p>
               <p className="font-medium">
                 {currency}
-                {cartAmount.toLocaleString()}
+                {typeof cartAmount === 'object' ? cartAmount.amount.toLocaleString() : cartAmount.toLocaleString()}
               </p>
             </div>
           </>
@@ -231,7 +235,7 @@ const CartTotal = () => {
 
         <hr className="my-2 border-gray-300" />
 
-        <div className="flex items-center justify-between text-lg font-bold">
+        <div className="flex items-center justify-between font-bold">
           <p>Total</p>
           <p>
             {currency}

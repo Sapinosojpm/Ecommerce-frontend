@@ -45,19 +45,22 @@ const Cart = () => {
     return () => lenis.destroy();
   }, []);
 
-  // Initialize cart data
   useEffect(() => {
     if (products.length > 0) {
       const tempData = [];
-      for (const itemId in cartItems) {
-        const item = cartItems[itemId];
-        const product = products.find((p) => p._id === itemId);
+
+      for (const compositeKey in cartItems) {
+        const item = cartItems[compositeKey];
+
+        // Extract base product ID from composite key: "prod123-{"color":"red"}"
+        const baseProductId = compositeKey.split("-")[0];
+        const product = products.find((p) => p._id === baseProductId);
 
         if (product && item.quantity > 0) {
           let availableStock = product.quantity;
 
-          // Calculate available stock based on variations if they exist
           if (item.variations && product.variations?.length > 0) {
+            // Calculate stock for variations carefully
             const variationQuantities = Object.entries(item.variations).map(
               ([varName, varData]) => {
                 const variation = product.variations.find(
@@ -76,7 +79,7 @@ const Cart = () => {
           }
 
           tempData.push({
-            _id: itemId,
+            _id: compositeKey, // Use composite key here so cartData maps correctly
             quantity: item.quantity,
             variations: item.variations || null,
             productData: product,
@@ -84,6 +87,7 @@ const Cart = () => {
           });
         }
       }
+
       setCartData(tempData);
       setLoading(false);
     }
@@ -98,6 +102,7 @@ const Cart = () => {
 
   const getTotalPrice = () => {
     return cartData.reduce((total, item) => {
+      
       const productData = item.productData;
       if (!productData) return total;
 
@@ -112,11 +117,13 @@ const Cart = () => {
           0
         );
       }
-
       const finalItemPrice = basePrice + variationAdjustment;
       return total + finalItemPrice * item.quantity;
+      
     }, 0);
+    
   };
+  
 
   const handleClearCart = async () => {
     const savedToken = localStorage.getItem("token");
@@ -161,20 +168,38 @@ const Cart = () => {
     }
   };
 
-  const handleQuantityChange = (itemId, newQuantity) => {
-    if (newQuantity <= 0) {
-      handleDeleteItem(itemId);
-      return;
-    }
+  // In Cart.jsx
+const handleQuantityChange = async (itemId, newQuantity) => {
+  if (isNaN(newQuantity) || newQuantity < 1) {
+    handleDeleteItem(itemId);
+    return;
+  }
 
-    const cartItem = cartData.find((item) => item._id === itemId);
-    if (cartItem && newQuantity > cartItem.availableStock) {
-      toast.error(`Only ${cartItem.availableStock} available in stock`);
-      return;
-    }
+  const cartItem = cartData.find((item) => item._id === itemId);
+  if (!cartItem) return;
 
-    updateQuantity(itemId, newQuantity);
-  };
+  // Round to nearest integer
+  newQuantity = Math.round(newQuantity);
+
+  if (newQuantity > cartItem.availableStock) {
+    toast.error(`Only ${cartItem.availableStock} available in stock`);
+    return;
+  }
+
+  const success = await updateQuantity(itemId, newQuantity);
+  if (!success) {
+    // Reset to previous quantity if update fails
+    const input = document.querySelector(`input[data-itemid="${itemId}"]`);
+    if (input) {
+      input.value = cartItem.quantity;
+    }
+  } else {
+    // Update local state immediately for better UX
+    setCartData(prev => prev.map(item => 
+      item._id === itemId ? {...item, quantity: newQuantity} : item
+    ));
+  }
+};
 
   if (loading) {
     return (
@@ -339,6 +364,7 @@ const Cart = () => {
                   min={1}
                   max={item.availableStock}
                   value={item.quantity}
+                  data-itemid={item._id}
                 />
 
                 <button

@@ -32,13 +32,25 @@ const ShopContextProvider = (props) => {
   const [intros, setIntros] = useState([]); // Add state for cards
   const [feePerKilo, setFeePerKilo] = useState(""); // Default value
   const [voucher1, setVoucher1] = useState(null);
-
+  
   const [voucherAmountDiscount, setVoucherAmountDiscount] = useState({
     code: "",
     amount: 0,
     minimumPurchase: 0,
   });
   const [buyNowItem, setBuyNowItem] = useState(null);
+   const [products, setProducts] = useState([]);
+  // Initialize token from localStorage immediately
+  const [token, setToken] = useState(localStorage.getItem("token") || "");
+  const navigate = useNavigate();
+  const [cartItems, setCartItems] = useState(() => {
+    const savedToken = localStorage.getItem("token");
+    if (!savedToken) {
+      const savedCart = JSON.parse(localStorage.getItem("cartItems") || "{}");
+      return savedCart;
+    }
+    return {}; // Will be populated by getUserCart
+  });
 
   // Add this to your ShopContext.jsx
   
@@ -241,18 +253,7 @@ const ShopContextProvider = (props) => {
     return discount || 0;
   };
 
-  const [products, setProducts] = useState([]);
-  // Initialize token from localStorage immediately
-  const [token, setToken] = useState(localStorage.getItem("token") || "");
-  const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState(() => {
-    const savedToken = localStorage.getItem("token");
-    if (!savedToken) {
-      const savedCart = JSON.parse(localStorage.getItem("cartItems") || "{}");
-      return savedCart;
-    }
-    return {}; // Will be populated by getUserCart
-  });
+ 
   
   useEffect(() => {
     const savedToken = localStorage.getItem("token");
@@ -320,103 +321,90 @@ const ShopContextProvider = (props) => {
   }, [backendUrl]);
 
   // Add product to cart
-  const addToCart = async (itemId, quantity, variations = null) => {
-    console.log("🧪 Adding to Cart:", { itemId, quantity, variations });
-    const itemInfo = products.find((product) => product._id === itemId);
-  
-    if (!itemInfo) {
-      toast.error("Product not found");
-      return;
-    }
-  
-    // Validate variations and check stock - only include the selected variation
-    const selectedVariations = {};
-    if (variations && Object.keys(variations).length > 0) {
-      // Get the active variation name (the one the user selected last)
-      const activeVariationName = Object.keys(variations)[0]; // Assuming only one variation is active
-      
-      if (variations[activeVariationName]) {
-        const productVariation = itemInfo.variations.find(v => v.name === activeVariationName);
+const addToCart = async (itemId, quantity, variations = null) => {
+  console.log("🧪 Adding to Cart:", { itemId, quantity, variations });
+  const itemInfo = products.find((product) => product._id === itemId);
+
+  if (!itemInfo) {
+    toast.error("Product not found");
+    return;
+  }
+
+  // Generate a unique key for this item + variations combination
+  const variationKey = variations ? JSON.stringify(variations) : 'default';
+  const cartItemKey = `${itemId}-${variationKey}`;
+
+  // Validate variations and check stock
+  const selectedVariations = {};
+  if (variations && Object.keys(variations).length > 0) {
+    for (const [varName, varData] of Object.entries(variations)) {
+      if (varData && varData.name) {
+        const productVariation = itemInfo.variations.find(v => v.name === varName);
         if (!productVariation) {
-          toast.error(`Variation ${activeVariationName} not found for this product`);
+          toast.error(`Variation ${varName} not found for this product`);
           return;
         }
         
-        const validOption = productVariation.options.find(o => o.name === variations[activeVariationName].name);
+        const validOption = productVariation.options.find(o => o.name === varData.name);
         if (!validOption) {
-          toast.error(`Invalid option ${variations[activeVariationName].name} for variation ${activeVariationName}`);
+          toast.error(`Invalid option ${varData.name} for variation ${varName}`);
           return;
         }
         
-        // Check if option is in stock
         if (validOption.quantity <= 0) {
-          toast.error(`Option ${validOption.name} for ${activeVariationName} is out of stock`);
+          toast.error(`Option ${validOption.name} for ${varName} is out of stock`);
           return;
         }
         
-        // Only include the selected variation
-        selectedVariations[activeVariationName] = {
+        selectedVariations[varName] = {
           name: validOption.name,
           priceAdjustment: validOption.priceAdjustment || 0,
         };
       }
     }
-  
-    // Calculate variation adjustment
-    const variationAdjustment = Object.values(selectedVariations).reduce(
-      (sum, opt) => sum + (opt.priceAdjustment || 0),
-      0
-    );
-  
-    // Check if same item with same variations already exists in cart
-    const existingCartItem = cartItems[itemId];
-    let newQuantity = quantity;
-    
-    if (existingCartItem) {
-      // Compare variations
-      const variationsMatch = JSON.stringify(existingCartItem.variations) === JSON.stringify(selectedVariations);
-      
-      if (variationsMatch) {
-        newQuantity = existingCartItem.quantity + quantity;
-      }
-    }
-  
-    // Update cart in local state
-    const updatedCart = {
-      ...cartItems,
-      [itemId]: {
-        quantity: newQuantity,
-        variations: selectedVariations,
-        variationAdjustment,
-        finalPrice: itemInfo.price + variationAdjustment
-      },
-    };
-  
-    setCartItems(updatedCart);
-  
-    // If user is logged in (token available), update cart in the backend
-    if (token) {
-      try {
-        await axios.post(
-          `${backendUrl}/api/cart/add`,
-          {
-            userId: localStorage.getItem("userId"),
-            itemId,
-            quantity: newQuantity,
-            variations: selectedVariations,
-            variationAdjustment,
-            finalPrice: itemInfo.price + variationAdjustment,
-          },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-      } catch (error) {
-        console.error("Failed to update cart in the database:", error);
-        toast.error("Failed to update the cart. Please try again.");
-        // Revert local state if API call fails
-        setCartItems(cartItems);
-      }
-    }
+  }
+
+  const variationAdjustment = Object.values(selectedVariations).reduce(
+    (sum, opt) => sum + (opt.priceAdjustment || 0),
+    0
+  );
+
+  // Update cart in local state
+  const updatedCart = {
+    ...cartItems,
+    [cartItemKey]: {
+      quantity: quantity,
+      variations: selectedVariations,
+      variationAdjustment,
+      finalPrice: itemInfo.price + variationAdjustment,
+      baseProductId: itemId // Keep reference to original product
+    },
   };
+
+  setCartItems(updatedCart);
+
+  if (token) {
+    try {
+      await axios.post(
+        `${backendUrl}/api/cart/add`,
+        {
+          userId: localStorage.getItem("userId"),
+          itemId: cartItemKey,
+          baseProductId: itemId,
+          quantity: quantity,
+          variations: selectedVariations,
+          variationAdjustment,
+          finalPrice: itemInfo.price + variationAdjustment,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error) {
+      console.error("Failed to update cart in the database:", error);
+      toast.error("Failed to update the cart. Please try again.");
+      setCartItems(cartItems);
+    }
+  }
+};
   
   useEffect(() => {
     if (!token && localStorage.getItem("token")) {
@@ -540,44 +528,51 @@ const ShopContextProvider = (props) => {
   }, []);
 
   // Fixed updateQuantity function with proper error handling and consistent API authentication
-  const updateQuantity = async (itemId, newQuantity) => {
-    try {
-      if (!token) {
-        toast.error("You need to be logged in to update cart.");
-        return false;
-      }
-
-      const response = await axios.put(
-        `${backendUrl}/api/cart/update`,
-        { itemId, quantity: newQuantity },
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
-
-      if (response.data.success) {
-        setCartItems((prev) => ({
-          ...prev,
-          [itemId]: {
-            ...prev[itemId],
-            quantity: newQuantity,
-          },
-        }));
-        
-        // Emit cart update to server if socket is connected
-        if (socket && user && user._id) {
-          socket.emit('cart-update', { userId: user._id });
-        }
-        
-        return true;
-      } else {
-        toast.error(response.data.message || "Failed to update cart.");
-        return false;
-      }
-    } catch (error) {
-      console.error("Error updating cart:", error);
-      toast.error("Something went wrong. Please try again.");
+  // In ShopContext.jsx
+const updateQuantity = async (itemId, newQuantity) => {
+  try {
+    if (!token) {
+      toast.error("You need to be logged in to update cart.");
       return false;
     }
-  };
+
+    const baseProductId = cartItems[itemId]?.baseProductId || itemId.split('-')[0];
+    
+    const response = await axios.put(
+      `${backendUrl}/api/cart/update`,
+      { 
+        userId: localStorage.getItem("userId"),
+        itemId,
+        baseProductId,
+        quantity: newQuantity 
+      },
+      { headers: { Authorization: `Bearer ${token}` }}
+    );
+
+    if (response.data.success) {
+      setCartItems(prev => {
+        const updatedCart = {...prev};
+        if (newQuantity > 0) {
+          updatedCart[itemId] = {
+            ...updatedCart[itemId],
+            quantity: newQuantity,
+          };
+        } else {
+          delete updatedCart[itemId];
+        }
+        return updatedCart;
+      });
+      return true;
+    } else {
+      toast.error(response.data.message || "Failed to update cart.");
+      return false;
+    }
+  } catch (error) {
+    console.error("Error updating cart:", error);
+    toast.error("Something went wrong. Please try again.");
+    return false;
+  }
+};
 
   // New removeFromCart function with consistent authentication header
   const removeFromCart = async (itemId) => {
@@ -642,49 +637,34 @@ const ShopContextProvider = (props) => {
       const quantity = itemData.quantity || 0;
       if (quantity <= 0) return;
 
-      const itemInfo = productDict[itemId];
+      const baseProductId = itemId.split('-')[0];
+      const itemInfo = productDict[baseProductId];
       if (!itemInfo) return;
 
       // Base price
       let itemPrice = itemInfo.price || 0;
 
-      // 🧩 Check for variation or variations (in case one uses `variation`, another uses `variations`)
-      let variationLabel = "";
-      let variationAdjustment = 0;
-
-      if (itemData.variation && itemData.variation.priceAdjustment) {
-        variationAdjustment = itemData.variation.priceAdjustment;
-        variationLabel = itemData.variation.label || "";
-      } else if (
-        itemData.variations &&
-        typeof itemData.variations === "object"
-      ) {
-        // Support multiple variations (e.g., size + color)
-        Object.values(itemData.variations).forEach((variation) => {
-          if (variation && variation.priceAdjustment) {
-            variationAdjustment += variation.priceAdjustment;
-          }
-        });
+      // Apply discount if exists
+      if (itemInfo.discount) {
+        itemPrice = itemPrice * (1 - itemInfo.discount / 100);
       }
 
-      itemPrice += variationAdjustment;
+      // Add variation adjustments
+      let variationAdjustment = 0;
+      if (itemData.variations && typeof itemData.variations === "object") {
+        variationAdjustment = Object.values(itemData.variations).reduce(
+          (sum, variation) => sum + (variation.priceAdjustment || 0),
+          0
+        );
+      }
 
-      // Discount
-      const itemDiscount = itemInfo.discount || 0;
-      const discountedPrice = itemPrice - itemPrice * (itemDiscount / 100);
-
-      totalAmount += discountedPrice * quantity;
+      const finalItemPrice = itemPrice + variationAdjustment;
+      totalAmount += finalItemPrice * quantity;
       totalWeight += (itemInfo.weight || 0) * quantity;
 
       console.log(
-        `🧮 Calculating ${itemInfo.name} x${quantity} (${variationLabel}):`
-      );
-      console.log(
-        `   Base: ₱${
-          itemInfo.price
-        }, +Variation: ₱${variationAdjustment}, Discount: ${itemDiscount}%, Subtotal: ₱${
-          discountedPrice * quantity
-        }`
+        `🧮 Calculating ${itemInfo.name} x${quantity}:`,
+        `Base: ₱${itemPrice}, +Variation: ₱${variationAdjustment}, Subtotal: ₱${finalItemPrice * quantity}`
       );
     });
 
@@ -693,7 +673,6 @@ const ShopContextProvider = (props) => {
     console.log("📦 Total Weight:", totalWeight);
     console.log("💰 Total Amount:", totalAmount);
 
-    // Return both amount and totalWeight
     return { amount: totalAmount, totalWeight };
   };
 
@@ -765,36 +744,37 @@ const ShopContextProvider = (props) => {
   
   // Fetch user cart data with consistent authorization header
   const getUserCart = async (userToken) => {
-    try {
-      const userId = localStorage.getItem("userId");
-      const response = await axios.post(
-        `${backendUrl}/api/cart/get`,
-        { userId },
-        { headers: { Authorization: `Bearer ${userToken}` } }
-      );
-  
-      if (response.data.success) {
-        const normalizedCart = {};
-        // Filter out items with quantity <= 0
-        Object.entries(response.data.cartData || {}).forEach(([key, item]) => {
-          if (item.quantity > 0) {
-            normalizedCart[item.itemId] = {
-              quantity: item.quantity,
-              variations: item.variations || null,
-              variationAdjustment: item.variationAdjustment || 0,
-              finalPrice: item.finalPrice || 0
-            };
-          }
-        });
-        setCartItems(normalizedCart);
-      }
-    } catch (error) {
-      console.error("Error fetching cart:", error);
-      // Fallback to localStorage if available
-      const savedCart = JSON.parse(localStorage.getItem("cartItems") || "{}");
-      setCartItems(savedCart);
+  try {
+    const userId = localStorage.getItem("userId");
+    const response = await axios.post(
+      `${backendUrl}/api/cart/get`,
+      { userId },
+      { headers: { Authorization: `Bearer ${userToken}` } }
+    );
+
+    if (response.data.success) {
+      const normalizedCart = {};
+      // Filter out items with quantity <= 0 and normalize structure
+      Object.entries(response.data.cartData || {}).forEach(([key, item]) => {
+        if (item.quantity > 0) {
+          normalizedCart[key] = {
+            quantity: item.quantity,
+            variations: item.variations || null,
+            variationAdjustment: item.variationAdjustment || 0,
+            finalPrice: item.finalPrice || 0,
+            baseProductId: item.itemId || key.split('-')[0] // Add base product ID
+          };
+        }
+      });
+      setCartItems(normalizedCart);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching cart:", error);
+    // Fallback to localStorage if available
+    const savedCart = JSON.parse(localStorage.getItem("cartItems") || "{}");
+    setCartItems(savedCart);
+  }
+};
   
   useEffect(() => {
     if (!token) {
