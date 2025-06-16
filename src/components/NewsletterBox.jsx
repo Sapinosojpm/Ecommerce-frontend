@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import axios from "axios";
+import { ShopContext } from "../context/ShopContext";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
 const NewsletterBox = () => {
@@ -8,12 +9,7 @@ const NewsletterBox = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [discount, setDiscount] = useState(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  useEffect(() => {
-    const user = localStorage.getItem("token");
-    setIsLoggedIn(!!user);
-  }, []);
+  const { token } = useContext(ShopContext);
 
   useEffect(() => {
     const fetchDiscount = async () => {
@@ -68,7 +64,7 @@ const NewsletterBox = () => {
 
       {/* Newsletter Form */}
       <div className="p-6 bg-white border border-gray-200 shadow-sm rounded-xl md:p-8">
-        {!isLoggedIn ? (
+        {!token ? (
           <div className="text-center">
             <div className="inline-flex items-center justify-center w-12 h-12 mb-4 bg-blue-100 rounded-lg">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,9 +75,9 @@ const NewsletterBox = () => {
             <p className="mb-4 text-gray-600">
               Please log in to subscribe and receive exclusive discounts.
             </p>
-            <button className="inline-flex items-center px-4 py-2 text-sm font-medium text-white transition-colors duration-200 bg-blue-600 rounded-lg hover:bg-blue-700">
+            <a href="/login" className="inline-flex items-center px-4 py-2 text-sm font-medium text-white transition-colors duration-200 bg-blue-600 rounded-lg hover:bg-blue-700">
               Sign In to Subscribe
-            </button>
+            </a>
           </div>
         ) : (
           <form onSubmit={onSubmitHandler} className="space-y-4">

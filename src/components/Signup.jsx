@@ -26,7 +26,7 @@ export default function SignUp() {
     };
 
     return (
-        <GoogleOAuthProvider clientId="676896020946-npg2vukngeemscbtlnvid58o77b44mrg.apps.googleusercontent.com">
+        <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
             <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
                 <h1 className="mb-6 text-3xl font-bold">Sign Up</h1>
                 <GoogleLogin

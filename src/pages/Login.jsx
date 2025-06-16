@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import axios from "axios";
 import { ShopContext } from "../context/ShopContext";
 import { toast } from "react-toastify";
@@ -8,6 +8,7 @@ import FacebookLoginButton from "../components/FacebookLoginButton";
 import validator from "validator";
 import OTPVerification from "../components/OTPVerification";
 import { useLocation } from "react-router-dom"; // Add this import
+import { countryCodes, formatPhoneNumber, getPlaceholder, getPattern, getMaxLength } from "../assets/countryCodes";
 
 const Login = () => {
   const location = useLocation(); // Get location to extract URL parameters
@@ -23,6 +24,8 @@ const Login = () => {
     userId: "",
   });
   const [captchaValue, setCaptchaValue] = useState(null);
+  const [captchaError, setCaptchaError] = useState(null);
+  const recaptchaRef = React.useRef();
   const [loading, setLoading] = useState(false);
   const [showOtpField, setShowOtpField] = useState(false);
   const [isPhoneLogin, setIsPhoneLogin] = useState(false);
@@ -31,6 +34,48 @@ const Login = () => {
   const [resetToken, setResetToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedCountryCode, setSelectedCountryCode] = useState("+63");
+  const [showCountryList, setShowCountryList] = useState(false);
+  const [searchCountry, setSearchCountry] = useState("");
+  const [filteredCountries, setFilteredCountries] = useState([]);
+
+  // Sort countries by name and group by region
+  const sortedCountries = useMemo(() => {
+    const regions = {
+      "Popular": ["+63", "+1", "+44", "+61", "+86", "+91"], // Most used countries
+      "Asia": countryCodes.filter(c => c.code.startsWith("+8") || c.code.startsWith("+9")),
+      "Europe": countryCodes.filter(c => c.code.startsWith("+3") || c.code.startsWith("+4")),
+      "Americas": countryCodes.filter(c => c.code.startsWith("+1") || c.code.startsWith("+5")),
+      "Oceania": countryCodes.filter(c => c.code.startsWith("+6")),
+      "Africa": countryCodes.filter(c => c.code.startsWith("+2"))
+    };
+
+    // Sort each region's countries by name
+    Object.keys(regions).forEach(region => {
+      if (region === "Popular") {
+        regions[region] = regions[region].map(code => 
+          countryCodes.find(c => c.code === code)
+        );
+      } else {
+        regions[region].sort((a, b) => a.country.localeCompare(b.country));
+      }
+    });
+
+    return regions;
+  }, []);
+
+  // Update filtered countries when search changes
+  useEffect(() => {
+    if (searchCountry) {
+      const filtered = countryCodes.filter(country =>
+        country.country.toLowerCase().includes(searchCountry.toLowerCase()) ||
+        country.code.includes(searchCountry)
+      );
+      setFilteredCountries(filtered);
+    } else {
+      setFilteredCountries([]);
+    }
+  }, [searchCountry]);
 
   // Extract reset token from URL if present
   useEffect(() => {
@@ -58,203 +103,128 @@ const Login = () => {
     }));
   };
 
-  // Reset password handler
-  const handlePasswordReset = async (e) => {
-    e.preventDefault();
+  // Update phone input handler
+  const handlePhoneChange = (e) => {
+    const formattedNumber = formatPhoneNumber(e.target.value, selectedCountryCode);
+    setFormData(prev => ({
+      ...prev,
+      phone: formattedNumber
+    }));
+  };
 
-    // Validate password
-    if (!newPassword) {
-      toast.error("Please enter a new password");
-      return;
-    }
+  // Add country code selection handler
+  const handleCountrySelect = (code) => {
+    setSelectedCountryCode(code);
+    setShowCountryList(false);
+    setSearchCountry("");
+    // Clear phone number when country changes
+    setFormData(prev => ({ ...prev, phone: "" }));
+  };
 
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords don't match. Please try again.");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      toast.error("Password must be at least 8 characters long");
-      return;
-    }
-
-    // Check for password strength
-    const hasUpperCase = /[A-Z]/.test(newPassword);
-    const hasLowerCase = /[a-z]/.test(newPassword);
-    const hasNumbers = /\d/.test(newPassword);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
-
-    if (!(hasUpperCase && hasLowerCase && hasNumbers) || !hasSpecialChar) {
-      toast.error(
-        "Password must contain uppercase and lowercase letters, numbers, and at least one special character"
-      );
-      return;
-    }
-
+  // Handle successful login (common function for all login methods)
+  const handleLoginSuccess = async (data) => {
     try {
-      setLoading(true);
-      toast.info("Processing your password reset...");
-      console.log("Sending reset token:", resetToken.substring(0, 10) + "...");
-      const response = await axios.post(
-        `${backendUrl}/api/user/reset-password/confirm`,
-        {
-          token: resetToken,
-          newPassword,
+      // Store token and user data
+      setToken(data.token);
+      setRole(data.role);
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("role", data.role);
+
+      const userId = data.userId || data.user?._id || data.id;
+      if (userId) {
+        localStorage.setItem("userId", userId);
+      }
+
+      // Fetch cart data
+      try {
+        const cartResponse = await axios.get(`${backendUrl}/api/cart/get`, {
+          headers: {
+            Authorization: `Bearer ${data.token}`,
+          },
+          params: {
+            userId: userId,
+          },
+        });
+
+        if (cartResponse.data.success) {
+          setCartItems(cartResponse.data.cartData || {});
         }
-      );
-
-      if (response.data.success) {
-        toast.success(
-          "Password reset successfully! You can now login with your new password."
-        );
-        setCurrentState("Login");
-        setResetToken("");
-        setNewPassword("");
-        setConfirmPassword("");
+      } catch (error) {
+        console.error("Error fetching cart:", error);
+        setCartItems({});
       }
+
+      toast.success("Login successful! Redirecting...");
+      navigate("/");
     } catch (error) {
-      console.error("Password reset error:", error.response || error);
-      // Handle specific reset password errors
-      const errorMessage = error.response?.data?.message || "";
-
-      if (errorMessage.includes("expired") || errorMessage.includes("token")) {
-        toast.error(
-          "Your password reset link has expired or is invalid. Please request a new one."
-        );
-      } else if (errorMessage.includes("recently used")) {
-        toast.error("Please choose a password you haven't used recently.");
-      } else {
-        toast.error(
-          errorMessage || "Failed to reset password. Please try again."
-        );
-      }
-    } finally {
-      setLoading(false);
+      console.error("Login success error:", error);
+      toast.error("Error during login process. Please try again.");
     }
   };
 
-  // Send OTP for phone verification
-  const handleSendOTP = async () => {
-    if (!formData.phone) {
-      toast.error(
-        "Please enter a phone number with country code (e.g., +639123456789)"
-      );
-      return;
-    }
-
+  // Handle Facebook login/signup success
+  const handleFacebookLoginSuccess = async (data) => {
     try {
-      setLoading(true);
-      toast.info("Sending verification code...");
-      const response = await axios.post(`${backendUrl}/api/otp/send-otp`, {
-        phoneNumber: formData.phone,
-      });
-
-      if (response.data.success) {
-        setShowOtpField(true);
-        setIsPhoneLogin(true);
-        toast.success("Verification code sent! Please check your messages.");
-      } else {
-        throw new Error(
-          response.data.message || "Failed to send verification code"
-        );
+      if (data.isNewUser) {
+        toast.success("Account created successfully with Facebook!");
       }
+      await handleLoginSuccess(data);
     } catch (error) {
-      console.error("OTP send error:", error);
-      toast.error(
-        error.response?.data?.message ||
-          "Couldn't send verification code. Please check the number and try again."
-      );
-    } finally {
-      setLoading(false);
+      console.error("Facebook login error:", error);
+      toast.error("Failed to complete Facebook login. Please try again.");
     }
   };
 
-  // Google login handler
+  // Handle Google login/signup success
   const handleGoogleLoginSuccess = async (response) => {
     try {
       setLoading(true);
-      // toast.info("Authenticating with Google...");
       const { credential } = response;
 
       if (!credential) {
         throw new Error("Google authentication failed. Please try again.");
       }
 
-      const backendResponse = await axios.post(
-        `${backendUrl}/api/user/google-login`,
-        { token: credential }
-      );
+      console.log("Starting Google authentication process...");
+      console.log("Current state:", currentState);
+
+      const endpoint = `${backendUrl}/api/auth/google-auth`;
+
+      const backendResponse = await axios.post(endpoint, { 
+        token: credential,
+        isSignUp: currentState === "Sign Up"
+      });
+
+      console.log("Backend response:", backendResponse.data);
 
       if (backendResponse.data.success) {
+        if (currentState === "Sign Up") {
+          toast.success("Account created successfully with Google!");
+        }
         await handleLoginSuccess(backendResponse.data);
-        // toast.success("Logged in successfully with Google!");
       } else {
-        throw new Error(backendResponse.data.message || "Google login failed");
+        throw new Error(backendResponse.data.message || "Google authentication failed");
       }
     } catch (error) {
-      // Handle specific Google auth errors
-      const errorMessage = error.message || "";
+      console.error("Google authentication error:", {
+        error: error,
+        response: error.response?.data,
+        status: error.response?.status
+      });
 
-      if (errorMessage.includes("already exists")) {
-        toast.error(
-          "This Google account is already linked to another account. Please try logging in with your email."
-        );
-      } else if (
-        errorMessage.includes("cancelled") ||
-        errorMessage.includes("popup closed")
-      ) {
-        toast.info(
-          "Google login was cancelled. You can try again or use another login method."
-        );
-      } else if (errorMessage.includes("network")) {
-        toast.error(
-          "Network error. Please check your internet connection and try again."
-        );
+      // Handle specific error cases
+      if (error.response?.status === 404) {
+        toast.error("No account found. Please sign up first.");
+      } else if (error.response?.status === 409) {
+        toast.error("An account with this email already exists. Please try logging in instead.");
+      } else if (error.response?.status === 500) {
+        toast.error("Server error. Please try again later.");
       } else {
-        toast.error(
-          errorMessage ||
-            "Failed to login with Google. Please try another method."
-        );
+        toast.error(error.response?.data?.message || "Failed to authenticate with Google. Please try again.");
       }
     } finally {
       setLoading(false);
     }
-  };
-
-  // Process successful login by storing tokens and fetching cart
-  const handleLoginSuccess = async (data) => {
-    // Store token and user data
-    setToken(data.token);
-    setRole(data.role);
-    localStorage.setItem("token", data.token);
-    localStorage.setItem("role", data.role);
-
-    const userId = data.userId || data.user?._id || data.id;
-    if (userId) {
-      localStorage.setItem("userId", userId);
-    }
-
-    // Fetch cart data with proper error handling
-    try {
-      const cartResponse = await axios.get(`${backendUrl}/api/cart/get`, {
-        headers: {
-          Authorization: `Bearer ${data.token}`,
-        },
-        params: {
-          userId: userId,
-        },
-      });
-
-      if (cartResponse.data.success) {
-        setCartItems(cartResponse.data.cartData || {});
-      }
-    } catch (error) {
-      console.error("Error fetching cart:", error);
-      // Initialize empty cart if fetch fails
-      setCartItems({});
-    }
-
-    navigate("/");
   };
 
   // OTP verification success handler
@@ -501,9 +471,21 @@ const handleAuthError = (error) => {
   }
 };
 
+  // Add this function after the existing state declarations
+  const resetCaptcha = () => {
+    setCaptchaValue(null);
+    setCaptchaError(null);
+    if (recaptchaRef.current) {
+      recaptchaRef.current.reset();
+    }
+  };
+
   // Main form submit handler
   const handleSubmit = async (event) => {
     event.preventDefault();
+
+    // Reset any previous CAPTCHA errors
+    setCaptchaError(null);
 
     // Handle password reset form separately
     if (currentState === "Reset Password") {
@@ -593,13 +575,14 @@ const handleAuthError = (error) => {
       }
     } catch (error) {
       handleAuthError(error);
-
-      // Reset verification state if needed
-      if (error.response?.data?.needsVerification === false) {
-        setRegistrationPending(false);
-        setShowOtpField(false);
+      
+      // Handle CAPTCHA specific errors
+      if (error.response?.data?.message?.toLowerCase().includes('captcha')) {
+        setCaptchaError(error.response.data.message);
+        resetCaptcha();
       }
 
+      // Reset verification state if needed
       if (error.response?.data?.needsVerification === false) {
         setRegistrationPending(false);
         setShowOtpField(false);
@@ -647,16 +630,85 @@ const handleAuthError = (error) => {
               required
               disabled={registrationPending && showOtpField}
             />
-            <input
-              name="phone"
-              onChange={handleInputChange}
-              value={formData.phone}
-              type="tel"
-              className="w-full px-3 py-2 text-black placeholder-gray-500 bg-white border border-black rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Phone Number (e.g., +639123456789)"
-              required
-              disabled={registrationPending && showOtpField}
-            />
+            <div className="relative">
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCountryList(!showCountryList)}
+                  className="flex items-center px-3 py-2 space-x-2 border rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <span className="text-xl">
+                    {countryCodes.find(c => c.code === selectedCountryCode)?.flag}
+                  </span>
+                  <span className="text-gray-700">{selectedCountryCode}</span>
+                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handlePhoneChange}
+                  placeholder={getPlaceholder(selectedCountryCode)}
+                  pattern={getPattern(selectedCountryCode)}
+                  maxLength={getMaxLength(selectedCountryCode)}
+                  className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+
+              {/* Country List Dropdown */}
+              {showCountryList && (
+                <div className="absolute z-50 mt-1 bg-white border rounded-lg shadow-lg w-72">
+                  <div className="p-2 border-b">
+                    <input
+                      type="text"
+                      value={searchCountry}
+                      onChange={(e) => setSearchCountry(e.target.value)}
+                      placeholder="Search country..."
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="overflow-y-auto max-h-60">
+                    {searchCountry ? (
+                      // Show filtered results
+                      filteredCountries.map((country) => (
+                        <button
+                          key={country.code}
+                          onClick={() => handleCountrySelect(country.code)}
+                          className="flex items-center w-full px-4 py-2 space-x-3 text-left hover:bg-gray-50"
+                        >
+                          <span className="text-xl">{country.flag}</span>
+                          <span className="text-gray-700">{country.country}</span>
+                          <span className="ml-auto text-gray-500">{country.code}</span>
+                        </button>
+                      ))
+                    ) : (
+                      // Show grouped results
+                      Object.entries(sortedCountries).map(([region, countries]) => (
+                        <div key={region}>
+                          <div className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-50">
+                            {region}
+                          </div>
+                          {countries.map((country) => (
+                            <button
+                              key={country.code}
+                              onClick={() => handleCountrySelect(country.code)}
+                              className="flex items-center w-full px-4 py-2 space-x-3 text-left hover:bg-gray-50"
+                            >
+                              <span className="text-xl">{country.flag}</span>
+                              <span className="text-gray-700">{country.country}</span>
+                              <span className="ml-auto text-gray-500">{country.code}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
             <input
               name="password"
               onChange={handleInputChange}
@@ -747,7 +799,7 @@ const handleAuthError = (error) => {
                   placeholder="Password"
                   required
                 />
-                <div className="flex justify-center">
+                {/* <div className="flex justify-center">
                   <button
                     type="button"
                     onClick={() => setIsPhoneLogin(true)}
@@ -755,20 +807,37 @@ const handleAuthError = (error) => {
                   >
                     Login with Phone Number
                   </button>
-                </div>
+                </div> */}
               </>
             ) : (
               <>
-                <input
-                  name="phone"
-                  onChange={handleInputChange}
-                  value={formData.phone}
-                  type="tel"
-                  className="w-full px-3 py-2 text-black placeholder-gray-500 bg-white border border-black rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Phone Number (e.g., +639345678909)"
-                  required
-                  disabled={showOtpField}
-                />
+                <div className="relative">
+                  <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCountryList(!showCountryList)}
+                      className="flex items-center px-3 py-2 text-black bg-white border border-black rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <span className="mr-2">{countryCodes.find(c => c.code === selectedCountryCode)?.flag}</span>
+                      <span>{selectedCountryCode}</span>
+                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    <input
+                      name="phone"
+                      onChange={handlePhoneChange}
+                      value={formData.phone}
+                      type="tel"
+                      className="flex-1 px-3 py-2 text-black placeholder-gray-500 bg-white border border-black rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder={getPlaceholder(selectedCountryCode)}
+                      required
+                      maxLength={getMaxLength(selectedCountryCode)}
+                      pattern={getPattern(selectedCountryCode)}
+                      disabled={showOtpField}
+                    />
+                  </div>
+                </div>
                 {showOtpField ? (
                   <OTPVerification
                     phone={formData.phone}
@@ -935,11 +1004,28 @@ const handleAuthError = (error) => {
             {/* Show CAPTCHA for Login and Sign Up with email */}
             {(currentState === "Login" || currentState === "Sign Up") &&
               !isPhoneLogin && (
-                <ReCAPTCHA
-                  sitekey="6Ldf-zArAAAAACFe76Bby2Lrn8BBdxMTSpXfo9_n"
-                  onChange={(value) => setCaptchaValue(value)}
-                  className="my-4"
-                />
+                <div className="space-y-2">
+                  <ReCAPTCHA
+                    ref={recaptchaRef}
+                    sitekey="6Ldf-zArAAAAACFe76Bby2Lrn8BBdxMTSpXfo9_n"
+                    onChange={(value) => {
+                      setCaptchaValue(value);
+                      setCaptchaError(null);
+                    }}
+                    onExpired={() => {
+                      setCaptchaValue(null);
+                      setCaptchaError("CAPTCHA expired. Please verify again.");
+                    }}
+                    onError={() => {
+                      setCaptchaValue(null);
+                      setCaptchaError("CAPTCHA error. Please try again.");
+                    }}
+                    className="my-4"
+                  />
+                  {captchaError && (
+                    <p className="text-sm text-red-600">{captchaError}</p>
+                  )}
+                </div>
               )}
 
             {renderSubmitButton()}
@@ -948,15 +1034,15 @@ const handleAuthError = (error) => {
 
         <div className="flex flex-col items-center justify-center p-6 border-l border-gray-200">
           <h3 className="mb-6 text-lg font-medium text-gray-700">
-            Or continue with
+            Or {currentState === "Sign Up" ? "sign up" : "continue"} with
           </h3>
 
           <div className="w-full space-y-4">
-            <GoogleOAuthProvider clientId="676896020946-npg2vukngeemscbtlnvid58o77b44mrg.apps.googleusercontent.com">
+            <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
               <GoogleLogin
                 onSuccess={handleGoogleLoginSuccess}
                 onError={() =>
-                  toast.error("Google login failed. Please try again.")
+                  toast.error("Google authentication failed. Please try again.")
                 }
                 useOneTap
                 theme="outline"
@@ -964,11 +1050,15 @@ const handleAuthError = (error) => {
                 size="large"
                 width="100%"
                 disabled={loading}
-                text="continue_with"
+                text={currentState === "Sign Up" ? "signup_with" : "continue_with"}
               />
             </GoogleOAuthProvider>
 
-            <FacebookLoginButton disabled={loading} />
+            <FacebookLoginButton 
+              disabled={loading} 
+              onLoginSuccess={handleFacebookLoginSuccess}
+              isSignUp={currentState === "Sign Up"}
+            />
           </div>
 
           {currentState === "Forgot Password" && (
