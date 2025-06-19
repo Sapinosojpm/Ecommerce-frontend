@@ -318,17 +318,35 @@ const computedTotal = useMemo(() => {
         };
       })
       .filter(Boolean),
-        amount: computedTotal,
+        amount: computedTotal - delivery_fee,
         discountAmount,
         voucherCode: voucherAmountDiscount?.code,
         voucherAmount: voucherAmountDiscount?.amount || 0,
-        deliveryFee: delivery_fee,
+        shippingFee: delivery_fee,
         region: formData.region,
         userId,
         paymentMethod: method,
         variationAdjustment: buyNowItem?.variationAdjustment || 0,
       };
       
+      // Debug logs for order calculation
+      const itemSubtotal = buyNowItem
+        ? buyNowItem.price * buyNowItem.quantity
+        : getCartAmount();
+      const discountPercentLog = discountPercent;
+      const discountAmountLog = (itemSubtotal * discountPercentLog) / 100;
+      const voucherAmountLog = voucherAmountDiscount?.amount || 0;
+      const finalItemTotal = itemSubtotal - discountAmountLog - voucherAmountLog;
+      console.log('==== ORDER DEBUG ====');
+      console.log('Item Subtotal:', itemSubtotal);
+      console.log('Discount Percent:', discountPercentLog);
+      console.log('Discount Amount:', discountAmountLog);
+      console.log('Voucher Amount:', voucherAmountLog);
+      console.log('Final Item Total (before shipping):', finalItemTotal);
+      console.log('Shipping Fee:', delivery_fee);
+      console.log('Amount sent to backend (should be finalItemTotal):', orderData.amount);
+      console.log('ShippingFee sent to backend:', orderData.shippingFee);
+      console.log('====================');
 
       let response;
 
