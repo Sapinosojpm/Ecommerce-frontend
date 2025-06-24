@@ -98,8 +98,11 @@ import calendar from './calendar.png'
 import jobseeker from './job-seeker.png'
 import question from './question-sign.png'
 import flashsale from './flash-sale.png'
-
+import truck_icon from './truck (2).png'
+import gps_icon from './gps.png'
 export const assets = {
+    gps_icon,
+    truck_icon,
     flashsale,
     question,
     jobseeker,

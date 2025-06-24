@@ -108,11 +108,24 @@ const Collection = () => {
       productCopy = productCopy.filter((item) => subCategory.includes(item.subCategory));
     }
 
-    // Apply discount calculation
-    productCopy = productCopy.map((item) => ({
-      ...item,
-      finalPrice: item.discount && item.discount > 0 ? item.price * (1 - item.discount / 100) : item.price,
-    }));
+    // Calculate the lowest possible price (base + lowest variation adjustment, minus discount)
+    productCopy = productCopy.map((item) => {
+      let minAdjustment = 0;
+      if (item.variations && item.variations.length > 0) {
+        minAdjustment = Math.min(
+          ...item.variations.flatMap(v => v.options.map(o => o.priceAdjustment || 0))
+        );
+      }
+      let displayPrice = item.price + minAdjustment;
+      if (item.discount > 0) {
+        displayPrice = displayPrice * (1 - item.discount / 100);
+      }
+      return {
+        ...item,
+        finalPrice: item.discount && item.discount > 0 ? item.price * (1 - item.discount / 100) : item.price,
+        displayPrice,
+      };
+    });
 
     setFilteredProducts(productCopy);
   };
@@ -333,6 +346,7 @@ const Collection = () => {
                     image={item.data.image}
                     description={item.data.description}
                     variations={item.data.variations}
+                    displayPrice={item.data.displayPrice}
                   />
                 ) : (
                   <AdCard

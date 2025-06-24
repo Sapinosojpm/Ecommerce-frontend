@@ -529,162 +529,165 @@ const Profile = () => {
   };
   
   return (
-    <div className="max-w-4xl p-6 mx-auto my-10 mt-24 bg-white shadow-lg rounded-xl">
-      {/* Loading and Error States */}
-      {loading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="flex flex-col items-center p-8 bg-white shadow-2xl rounded-2xl">
-            <div className="w-12 h-12 mb-4 border-4 border-t-4 border-gray-200 rounded-full border-t-blue-500 animate-spin"></div>
-            <p className="text-gray-600">Updating profile...</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center py-12 px-2">
+      <div className="max-w-4xl w-full p-6 mx-auto my-10 mt-24 bg-white shadow-2xl rounded-2xl transition-all duration-300 hover:shadow-[0_8px_40px_rgba(8,131,149,0.10)]">
+        {/* Loading and Error States */}
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="flex flex-col items-center p-8 bg-white shadow-2xl rounded-2xl">
+              <div className="w-12 h-12 mb-4 border-4 border-t-4 border-gray-200 rounded-full border-t-blue-500 animate-spin"></div>
+              <p className="text-gray-600">Updating profile...</p>
+            </div>
           </div>
-        </div>
-      )}
-      
-      {error && (
-        <div className="p-4 mb-6 text-red-700 bg-red-100 border-l-4 border-red-500 rounded-lg">
-          <div className="flex items-center">
-            <X className="w-5 h-5 mr-3" />
-            <p className="font-medium">Error: {error}</p>
+        )}
+        {error && (
+          <div className="p-4 mb-6 text-red-700 bg-red-100 border-l-4 border-red-500 rounded-lg">
+            <div className="flex items-center">
+              <X className="w-5 h-5 mr-3" />
+              <p className="font-medium">Error: {error}</p>
+            </div>
           </div>
-        </div>
-      )}
-      
-      {!loading && !error && (
-        <>
-          {/* Profile Header */}
-          <div className="flex flex-col pb-6 mb-6 border-b md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center mb-4 md:mb-0">
-              {/* Profile Picture with Upload */}
-              <div className="relative mr-4">
-                <div className="relative">
-                  {formData.profilePicture || imagePreview ? (
-                    <img 
-                      src={imagePreview || formData.profilePicture} 
-                      alt="Profile" 
-                      className="object-cover w-20 h-20 border-4 border-gray-200 rounded-full shadow-sm"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center w-20 h-20 text-xl font-bold text-white border-4 border-gray-200 rounded-full shadow-sm bg-gradient-to-br from-blue-500 to-blue-600">
-                      {getInitials()}
-                    </div>
-                  )}
-                  
-                  {editMode && (
-                    <div className="absolute -bottom-1 -right-1">
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploadingImage}
-                        className="flex items-center justify-center w-8 h-8 text-white transition-colors duration-200 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700"
-                        title="Upload profile picture"
-                      >
-                        {uploadingImage ? (
-                          <div className="w-4 h-4 border-2 border-white rounded-full border-t-transparent animate-spin"></div>
-                        ) : (
-                          <Camera className="w-4 h-4" />
-                        )}
-                      </button>
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
+        )}
+        {!loading && !error && (
+          <>
+            {/* Profile Header */}
+            <div className="flex flex-col pb-6 mb-8 border-b-0 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center mb-4 md:mb-0">
+                {/* Profile Picture with Upload */}
+                <div className="relative mr-4 group">
+                  <div className="relative">
+                    {formData.profilePicture || imagePreview ? (
+                      <img
+                        src={imagePreview || formData.profilePicture}
+                        alt="Profile"
+                        className="object-cover w-20 h-20 border-4 border-gray-200 rounded-full shadow-sm transition-transform duration-300 group-hover:scale-105 group-hover:shadow-lg"
                       />
-                    </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-20 h-20 text-xl font-bold text-white border-4 border-gray-200 rounded-full shadow-sm bg-gradient-to-br from-blue-500 to-blue-600 transition-transform duration-300 group-hover:scale-105 group-hover:shadow-lg">
+                        {getInitials()}
+                      </div>
+                    )}
+                    {editMode && (
+                      <div className="absolute -bottom-1 -right-1">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingImage}
+                          className="flex items-center justify-center w-8 h-8 text-white transition-colors duration-200 bg-blue-600 rounded-full shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                          title="Upload profile picture"
+                          aria-label="Upload profile picture"
+                        >
+                          {uploadingImage ? (
+                            <div className="w-4 h-4 border-2 border-white rounded-full border-t-transparent animate-spin"></div>
+                          ) : (
+                            <Camera className="w-4 h-4" />
+                          )}
+                        </button>
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          className="hidden"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800">
+                    {formData.firstName} {formData.lastName}
+                  </h1>
+                  <p className="flex items-center mt-1 text-sm text-gray-500">
+                    <Mail className="w-4 h-4 mr-1" />
+                    {formData.email}
+                  </p>
+                  {formData.phone && (
+                    <p className="flex items-center mt-1 text-sm text-gray-500">
+                      <Phone className="w-4 h-4 mr-1" />
+                      {formData.phone}
+                    </p>
                   )}
                 </div>
               </div>
-              
               <div>
-                <h1 className="text-2xl font-bold text-gray-800">
-                  {formData.firstName} {formData.lastName}
-                </h1>
-                <p className="flex items-center mt-1 text-sm text-gray-500">
-                  <Mail className="w-4 h-4 mr-1" />
-                  {formData.email}
-                </p>
-                {formData.phone && (
-                  <p className="flex items-center mt-1 text-sm text-gray-500">
-                    <Phone className="w-4 h-4 mr-1" />
-                    {formData.phone}
-                  </p>
+                {!editMode ? (
+                  <button
+                    onClick={() => setEditMode(true)}
+                    className="flex items-center gap-2 px-6 py-2 text-white transition-all duration-200 bg-blue-600 rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 hover:scale-105"
+                  >
+                    <Edit3 className="w-4 h-4" />
+                    Edit Profile
+                  </button>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(userDetails);
+                        setEditMode(false);
+                        setImagePreview(null);
+                        setError("");
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-gray-700 transition-all duration-200 bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 hover:scale-105"
+                    >
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={JSON.stringify(userDetails) === JSON.stringify(formData)}
+                      className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 hover:scale-105 ${
+                        JSON.stringify(userDetails) === JSON.stringify(formData)
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-green-600 hover:bg-green-700 focus:ring-green-500"
+                      }`}
+                    >
+                      <Save className="w-4 h-4" />
+                      Save Changes
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
-            
-            <div>
-              {!editMode ? (
-                <button 
-                  onClick={() => setEditMode(true)} 
-                  className="flex items-center gap-2 px-6 py-2 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            {/* Sidebar + Content Layout */}
+            <div className="flex flex-col md:flex-row gap-10">
+              {/* Sidebar Navigation */}
+              <div className="flex md:flex-col gap-2 md:gap-4 md:w-56 md:bg-gradient-to-br md:from-blue-50 md:to-green-50 md:rounded-2xl md:py-8 md:px-4 md:shadow-md">
+                <button
+                  onClick={() => setActiveSection("personal")}
+                  className={`flex items-center gap-3 px-4 py-3 w-full font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-lg md:rounded-xl text-left md:text-base text-sm shadow-sm md:shadow-none ${
+                    activeSection === "personal"
+                      ? "bg-blue-100 text-blue-700 md:bg-blue-50"
+                      : "text-gray-600 hover:text-blue-500 hover:bg-blue-50"
+                  }`}
+                  aria-label="Personal Information Tab"
                 >
-                  <Edit3 className="w-4 h-4" />
-                  Edit Profile
+                  <User className="w-5 h-5" />
+                  Personal Information
                 </button>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFormData(userDetails);
-                      setEditMode(false);
-                      setImagePreview(null);
-                      setError("");
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 text-gray-700 transition-colors bg-gray-200 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                  >
-                    <X className="w-4 h-4" />
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={JSON.stringify(userDetails) === JSON.stringify(formData)}
-                    className={`flex items-center gap-2 px-4 py-2 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                      JSON.stringify(userDetails) === JSON.stringify(formData)
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700 focus:ring-green-500"
-                    }`}
-                  >
-                    <Save className="w-4 h-4" />
-                    Save Changes
-                  </button>
+                <button
+                  onClick={() => setActiveSection("address")}
+                  className={`flex items-center gap-3 px-4 py-3 w-full font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 rounded-lg md:rounded-xl text-left md:text-base text-sm shadow-sm md:shadow-none ${
+                    activeSection === "address"
+                      ? "bg-green-100 text-green-700 md:bg-green-50"
+                      : "text-gray-600 hover:text-green-500 hover:bg-green-50"
+                  }`}
+                  aria-label="Address Tab"
+                >
+                  <MapPin className="w-5 h-5" />
+                  Address
+                </button>
+              </div>
+              {/* Form Content */}
+              <div className="flex-1">
+                <div className="p-6 bg-gradient-to-br from-blue-50 to-green-50 rounded-xl shadow-inner">
+                  {renderFormFields()}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-  
-          {/* Tab Navigation */}
-          <div className="flex mb-6 border-b">
-            <button
-              onClick={() => setActiveSection("personal")}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
-                activeSection === "personal"
-                  ? "text-blue-600 border-b-2 border-blue-600"
-                  : "text-gray-600 hover:text-blue-500"
-              }`}
-            >
-              <User className="w-4 h-4" />
-              Personal Information
-            </button>
-            <button
-              onClick={() => setActiveSection("address")}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors ${
-                activeSection === "address"
-                  ? "text-green-600 border-b-2 border-green-600"
-                  : "text-gray-600 hover:text-green-500"
-              }`}
-            >
-              <MapPin className="w-4 h-4" />
-              Address
-            </button>
-          </div>
-          
-          {/* Form Content */}
-          <div className="mb-6">
-            {renderFormFields()}
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 };

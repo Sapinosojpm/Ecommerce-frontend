@@ -95,10 +95,10 @@ const PlaceOrder = () => {
   const orderItems = buyNowItem
     ? [buyNowItem]
     : Object.keys(cartItems)
-        .filter((itemId) => cartItems[itemId] > 0)
+        .filter((itemId) => cartItems[itemId]?.quantity > 0)
         .map((itemId) => {
           const itemInfo = products.find((product) => product._id === itemId);
-          return itemInfo ? { ...itemInfo, quantity: cartItems[itemId] } : null;
+          return itemInfo ? { ...itemInfo, quantity: cartItems[itemId].quantity } : null;
         })
         .filter(Boolean);
 
@@ -255,19 +255,35 @@ const computedTotal = useMemo(() => {
     }
   
     try {
+      if (computedTotal <= 0) {
+        toast.error("Order total must be greater than zero.");
+        setLoading(false);
+        return;
+      }
+      console.log('[DEBUG] PlaceOrder - computedTotal (total amount to backend):', computedTotal);
+
       const orderItems = buyNowItem
   ? [buyNowItem]
   : Object.keys(cartItems)
       .filter((itemId) => cartItems[itemId]?.quantity > 0)
-      .map((itemId) => {
-        const itemInfo = products.find((product) => product._id === itemId);
-        return itemInfo 
-          ? { 
-              ...itemInfo, 
-              quantity: cartItems[itemId].quantity,
-              variations: cartItems[itemId].variations // Include variations
-            } 
-          : null;
+      .map(itemId => {
+        const baseProductId = itemId.split('-')[0];
+        const product = products.find(p => p._id === baseProductId);
+        if (!product) return null;
+
+        const cartItem = cartItems[itemId];
+        const selectedVariations = cartItem.variations || {};
+
+        return {
+          ...product,
+          productId: baseProductId,
+          quantity: cartItem.quantity,
+          variationDetails: Object.entries(selectedVariations).map(([variationName, option]) => ({
+            variationName,
+            optionName: option.name,
+            priceAdjustment: option.priceAdjustment || 0
+          }))
+        };
       })
       .filter(Boolean);
   
@@ -295,30 +311,8 @@ const computedTotal = useMemo(() => {
             }))
           : []
       }]
-      : Object.keys(cartItems)
-      .filter(itemId => cartItems[itemId]?.quantity > 0)
-      .map(itemId => {
-        const product = products.find(p => p._id === itemId);
-        if (!product) return null;
-        
-        const cartItem = cartItems[itemId];
-        
-        // Ensure we're only using selected variations
-        const selectedVariations = cartItem.variations || {};
-        
-        return {
-          ...product,
-          productId: product._id,
-          quantity: cartItem.quantity,
-          variationDetails: Object.entries(selectedVariations).map(([variationName, option]) => ({
-            variationName,
-            optionName: option.name,
-            priceAdjustment: option.priceAdjustment || 0
-          }))
-        };
-      })
-      .filter(Boolean),
-        amount: computedTotal - delivery_fee,
+      : orderItems,
+        amount: Math.round(computedTotal * 100) / 100,
         discountAmount,
         voucherCode: voucherAmountDiscount?.code,
         voucherAmount: voucherAmountDiscount?.amount || 0,
@@ -589,7 +583,6 @@ const computedTotal = useMemo(() => {
             <span>Upload Receipt</span>
           </div>
         </div>
-
         {method === "receipt" && (
           <div className="mt-4">
             <label className="block mb-2 text-sm font-medium text-gray-700">Payment Receipt</label>
@@ -605,7 +598,6 @@ const computedTotal = useMemo(() => {
             <p className="mt-1 text-xs text-gray-500">Upload screenshot or photo of your payment receipt</p>
           </div>
         )}
-
         <button 
           disabled={loading || isUploadingReceipt} 
           className="mt-6 py-2 w-full bg-[#17A554] text-white bg-black rounded"

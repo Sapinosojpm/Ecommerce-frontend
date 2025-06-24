@@ -189,9 +189,10 @@ const Product = () => {
 
     let calculatedPrice = productData.price;
 
-    Object.values(selections).forEach((option) => {
-      calculatedPrice += option.priceAdjustment || 0;
-    });
+    // Only add the price adjustment for the active variation
+    if (activeVariationName && selections[activeVariationName]) {
+      calculatedPrice += selections[activeVariationName].priceAdjustment || 0;
+    }
 
     if (productData.discount > 0) {
       calculatedPrice = calculatedPrice * (1 - productData.discount / 100);
@@ -201,11 +202,15 @@ const Product = () => {
   };
 
   const handleVariationChange = (variationName, option) => {
+    // Only allow one option per variation type
+    setSelectedVariations(prev => ({
+      ...prev,
+      [variationName]: option
+    }));
     const newSelections = {
       ...selectedVariations,
       [variationName]: option,
     };
-    setSelectedVariations(newSelections);
     calculatePrice(newSelections);
     updateAvailableQuantity(newSelections);
   };
@@ -262,7 +267,6 @@ const Product = () => {
     if (foundProduct) {
       setProductData(foundProduct);
       setImage(foundProduct.image[0]);
-
       if (foundProduct.variations?.length > 0) {
         const initialSelections = {};
         foundProduct.variations.forEach((variation) => {
@@ -286,7 +290,6 @@ const Product = () => {
       if (data) {
         setProductData(data);
         setImage(data.image[0]);
-
         if (data.variations?.length > 0) {
           const initialSelections = {};
           data.variations.forEach((variation) => {
@@ -323,45 +326,32 @@ const Product = () => {
   }, [selectedVariations, productId]);
 
   useEffect(() => {
-    const savedSelections = localStorage.getItem(
-      `product_${productId}_selections`
-    );
-    if (savedSelections) {
-      try {
-        const parsed = JSON.parse(savedSelections);
-        if (productData) {
-          const validSelections = {};
-          Object.entries(parsed).forEach(([name, option]) => {
-            const variation = productData.variations?.find(
-              (v) => v.name === name
-            );
-            if (
-              variation &&
-              variation.options.some((opt) => opt.name === option.name)
-            ) {
-              validSelections[name] = option;
-            }
-          });
-          if (Object.keys(validSelections).length > 0) {
-            setSelectedVariations(validSelections);
-            updateAvailableQuantity(validSelections);
-          }
-        }
-      } catch (e) {
-        console.error("Failed to parse saved selections", e);
-      }
-    }
-  }, [productData, productId]);
-
-  useEffect(() => {
-    if (selectedVariations && productData) {
-      calculatePrice(selectedVariations);
-    }
-  }, [selectedVariations, productData]);
-
-  useEffect(() => {
     setUserRole(localStorage.getItem("role") || null);
   }, []);
+
+  useEffect(() => {
+    if (productData) {
+      setImage(productData.image[0]);
+      if (productData.variations?.length > 0) {
+        const initialSelections = {};
+        productData.variations.forEach((variation) => {
+          if (variation.options.length > 0) {
+            const firstInStockOption =
+              variation.options.find((opt) => opt.quantity > 0) ||
+              variation.options[0];
+            initialSelections[variation.name] = firstInStockOption;
+          }
+        });
+        setSelectedVariations(initialSelections);
+        setActiveVariationName(productData.variations[0].name);
+        calculatePrice(initialSelections);
+        updateAvailableQuantity(initialSelections);
+      } else {
+        setFinalPrice(productData.price);
+        setAvailableQuantity(productData.quantity || 0);
+      }
+    }
+  }, [productData]);
 
   if (!productData) {
     return <div className="mt-10 text-xl text-center">Loading...</div>;
@@ -401,6 +391,13 @@ const Product = () => {
     return Object.keys(defaultVariations).length > 0 ? defaultVariations : null;
   };
 
+  // Only allow add to cart/buy now if all variations are selected
+  const allVariationsSelected = productData?.variations
+    ? productData.variations.every(
+        (variation) => selectedVariations[variation.name]
+      )
+    : true;
+
   return (
     <div className="container px-4 py-12 mx-auto my-20 product-page">
       <div className="flex flex-col gap-8 lg:flex-row">
@@ -423,22 +420,24 @@ const Product = () => {
               ))}
             </div>
 
-            <div className="z-50 flex items-center justify-center w-full cursor-pointer sm:w-3/4">
-              <Lens
-                zoomFactor={3}
-                lensSize={200}
-                hovering={hovering}
-                setHovering={setHovering}
-              >
-                <motion.img
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                  src={image}
-                  alt="Main Product Image"
-                  className="object-contain w-full h-auto"
-                />
-              </Lens>
+            <div className="relative flex items-center justify-center w-full cursor-pointer sm:w-3/4">
+              <div className="relative" style={{ zIndex: 10 }}>
+                <Lens
+                  zoomFactor={3}
+                  lensSize={200}
+                  hovering={hovering}
+                  setHovering={setHovering}
+                >
+                  <motion.img
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5 }}
+                    src={image}
+                    alt="Main Product Image"
+                    className="object-contain w-full h-auto"
+                  />
+                </Lens>
+              </div>
             </div>
           </div>
 
@@ -514,15 +513,7 @@ const Product = () => {
                         ?.options.map((option) => (
                           <button
                             key={option.name}
-                            onClick={() => {
-                              const newSelection = {
-                                ...selectedVariations,
-                                [activeVariationName]: option,
-                              };
-                              setSelectedVariations(newSelection);
-                              calculatePrice(newSelection);
-                              updateAvailableQuantity(newSelection);
-                            }}
+                            onClick={() => handleVariationChange(activeVariationName, option)}
                             className={`px-4 py-2 text-sm border rounded-full transition-colors ${
                               selectedVariations[activeVariationName]?.name ===
                               option.name
@@ -579,38 +570,59 @@ const Product = () => {
                     </div>
 
                     <div className="flex flex-wrap gap-4">
-                      <AnimatedButton
-                        text="ADD TO CART"
-                        successText="Added!"
-                        onClick={() => {
-                          addToCart(
-                            productData._id,
-                            quantity,
-                            Object.keys(selectedVariations).length > 0
-                              ? selectedVariations
-                              : null
-                          );
-                        }}
-                        icon={<FaShoppingCart className="w-6 h-6 text-white" />}
-                        disabled={selectedVariationQuantity === 0}
-                      />
+                  
+<AnimatedButton
+  text="ADD TO CART"
+  successText="Added!"
+  onClick={() => {
+    if (!allVariationsSelected) {
+      toast.error("Please select all variations.");
+      return;
+    }
+    // PATCH: Only include the currently active variation in selectedVars
+    const selectedVars = {};
+    if (activeVariationName && selectedVariations[activeVariationName]) {
+      selectedVars[activeVariationName] = {
+        name: selectedVariations[activeVariationName].name,
+        priceAdjustment: selectedVariations[activeVariationName].priceAdjustment || 0
+      };
+    }
+    addToCart(
+      productData._id,
+      quantity,
+      selectedVars
+    );
+  }}
+  icon={<FaShoppingCart className="w-6 h-6 text-white" />}
+  disabled={selectedVariationQuantity === 0 || !allVariationsSelected}
+/>
                       <AnimatedButton
                         text="BUY NOW"
                         successText="Redirecting..."
                         onClick={() => {
+                          if (!allVariationsSelected) {
+                            toast.error("Please select all variations.");
+                            return;
+                          }
+                          // PATCH: Only include the currently active variation in selectedVars
+                          const selectedVars = {};
+                          if (activeVariationName && selectedVariations[activeVariationName]) {
+                            selectedVars[activeVariationName] = {
+                              name: selectedVariations[activeVariationName].name,
+                              priceAdjustment: selectedVariations[activeVariationName].priceAdjustment || 0
+                            };
+                          }
                           handleBuyNow(
                             productData._id,
                             quantity,
-                            Object.keys(selectedVariations).length > 0
-                              ? selectedVariations
-                              : null,
+                            selectedVars,
                             finalPrice,
                             calculatePrice
                           );
                           toast.success("Redirecting to checkout...");
                         }}
                         className="bg-blue-600 hover:bg-blue-700"
-                        disabled={availableQuantity === 0}
+                        disabled={availableQuantity === 0 || !allVariationsSelected}
                       />
 
                       <WishlistIcon

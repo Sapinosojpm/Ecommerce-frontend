@@ -14,36 +14,88 @@ const CartTotal = () => {
     getDiscountAmount,
     getTotalAmount,
     applyDiscount,
-    cartItems = [],
+    cartItems = {},
     discountPercent,
     getCartItemsWithDetails,
     voucherAmountDiscount,
     setVoucherAmountDiscount,
     buyNowItem,
+    products = [],
   } = useContext(ShopContext);
 
   const [voucher, setVoucher] = useState("");
   const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState([]);
   const [claimedVouchers, setClaimedVouchers] = useState([]);
 
-  // Calculate cart amount
-  const cartAmount = getCartAmount();
+  // Build cartData as in Cart.jsx
+  const getCartData = () => {
+    const tempDataMap = {};
+    for (const compositeKey in cartItems) {
+      const item = cartItems[compositeKey];
+      const baseProductId = compositeKey.split('-')[0];
+      const product = products.find((p) => p._id === baseProductId);
+      let normalizedVariationKey = 'default';
+      if (item.variations && Object.keys(item.variations).length > 0) {
+        const sortedVariationEntries = Object.entries(item.variations).sort(([a], [b]) => a.localeCompare(b));
+        normalizedVariationKey = JSON.stringify(Object.fromEntries(sortedVariationEntries));
+      }
+      const normalizedKey = `${baseProductId}-${normalizedVariationKey}`;
+      if (product && item.quantity > 0) {
+        let availableStock = product.quantity;
+        if (item.variations && product.variations?.length > 0) {
+          const variationQuantities = Object.entries(item.variations).map(
+            ([varName, varData]) => {
+              const variation = product.variations.find((v) => v.name === varName);
+              if (!variation) return 0;
+              const option = variation.options.find((o) => o.name === varData.name);
+              return option?.quantity || 0;
+            }
+          );
+          availableStock = Math.min(...variationQuantities);
+        }
+        if (tempDataMap[normalizedKey]) {
+          tempDataMap[normalizedKey].quantity += item.quantity;
+        } else {
+          tempDataMap[normalizedKey] = {
+            _id: normalizedKey,
+            quantity: item.quantity,
+            variations: item.variations || null,
+            productData: product,
+            availableStock,
+          };
+        }
+      }
+    }
+    return Object.values(tempDataMap);
+  };
+
+  // Calculate subtotal and total for Buy Now or Cart
+  let subtotal;
+  if (buyNowItem) {
+    subtotal = Math.round((buyNowItem.price * buyNowItem.quantity - ((buyNowItem.price * buyNowItem.quantity * (buyNowItem.discount || 0)) / 100)) * 100) / 100;
+  } else {
+    const cartData = getCartData();
+    subtotal = cartData.reduce((total, item) => {
+      const productData = item.productData;
+      if (!productData) return total;
+      let variationAdjustment = 0;
+      if (item.variations) {
+        variationAdjustment = Object.values(item.variations).reduce(
+          (sum, variation) => sum + (variation.priceAdjustment || 0),
+          0
+        );
+      }
+      let basePrice = (productData.price || 0) + variationAdjustment;
+      const discount = productData.discount ? (basePrice * (productData.discount / 100)) : 0;
+      const finalPrice = Math.round((basePrice - discount) * 100) / 100;
+      const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
+      return Math.round((total + itemTotal) * 100) / 100;
+    }, 0);
+  }
+  const totalAmount = Math.round((subtotal + delivery_fee - (voucherAmountDiscount?.amount || 0)) * 100) / 100;
 
   // Calculate discount amount
-  const discountAmount = getDiscountAmount();
-
-  // Calculate total amount
-  const totalAmount = getTotalAmount();
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      const productDetails = await getCartItemsWithDetails();
-      setProducts(productDetails);
-    };
-
-    if (cartItems.length > 0) fetchProducts();
-  }, [cartItems]);
+  const discountAmount = Math.round(getDiscountAmount() * 100) / 100;
 
   useEffect(() => {
     const fetchClaimedVouchers = async () => {
@@ -199,7 +251,7 @@ const CartTotal = () => {
               <p>Subtotal</p>
               <p className="font-medium">
                 {currency}
-                {typeof cartAmount === 'object' ? cartAmount.amount.toLocaleString() : cartAmount.toLocaleString()}
+                {subtotal.toLocaleString()}
               </p>
             </div>
           </>

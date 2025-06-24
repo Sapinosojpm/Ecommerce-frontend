@@ -27,55 +27,56 @@ const SaleProductCard = React.memo(({ product }) => {
     [product.image]
   );
 
-  return (
-    <Link 
-      to={`/product/${product._id}`} 
-      className="block h-full rounded-lg group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      aria-label={`View ${product.name} on sale for ₱${discountedPrice}`}
-    >
-      <div className="relative flex flex-col h-full p-4 transition-all duration-300 bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-xl hover:scale-[1.02] group-focus:shadow-xl group-focus:scale-[1.02]">
-        {/* Discount Badge */}
-        <div className="absolute z-10 px-3 py-1 text-xs font-bold text-white rounded-full shadow-md bg-gradient-to-r from-red-500 to-red-600 top-3 left-3 sm:text-sm animate-pulse">
-          -{product.discount}%
-        </div>
+  const [hovered, setHovered] = useState(false);
 
-        {/* Product Image */}
-        <div className="relative flex items-center justify-center w-full h-48 mb-4 overflow-hidden rounded-lg bg-gray-50 sm:h-52 md:h-56">
+  return (
+    <Link
+      to={`/product/${product._id}`}
+      className="group relative flex flex-col h-[420px] w-full transition-all duration-500 bg-white border border-gray-100 rounded-2xl overflow-hidden hover:border-[#088395]/20"
+      style={{ maxWidth: 340, minWidth: 0 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {/* Sale Badge */}
+      {product.discount > 0 && (
+        <div className="absolute z-20 top-4 left-4">
+          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg backdrop-blur-sm">
+            -{product.discount}% OFF
+          </div>
+        </div>
+      )}
+      {/* Product Image Section */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 aspect-square w-full">
+        <div className="relative w-full h-full overflow-hidden aspect-square">
           <img
+            className={`w-full h-full object-cover transition-all duration-700 ease-in-out transform group-hover:scale-105 ${hovered ? 'brightness-110' : ''}`}
             src={imageUrl}
             alt={product.name}
-            className="object-contain w-full h-full transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
-            onError={(e) => {
-              e.target.src = assets.placeholder || '/placeholder-image.jpg';
-            }}
           />
+          {/* Gradient Overlay on Hover */}
+          <div className={`absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent transition-opacity duration-500 ${hovered ? 'opacity-100' : 'opacity-0'}`} />
         </div>
-
-        {/* Product Details */}
-        <div className="flex flex-col flex-grow">
-          {/* Product Name */}
-          <div className="min-h-[4rem] mb-3">
-            <h3 className="font-semibold text-gray-800 transition-colors duration-200 text-md md:text-lg line-clamp-2 group-hover:text-blue-600">
-              {product.name}
-            </h3>
-          </div>
-
-          {/* Price Section */}
-          <div className="mt-auto">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-red-600 md:text-xl">
-                  ₱{discountedPrice}
-                </span>
-                <span className="text-sm text-gray-500 line-through md:text-base">
-                  ₱{product.price.toFixed(2)}
-                </span>
-              </div>
-              <div className="text-xs font-medium text-green-600">
-                You save ₱{(product.price - parseFloat(discountedPrice)).toFixed(2)}
-              </div>
-            </div>
+      </div>
+      {/* Product Information */}
+      <div className="flex-grow p-6 space-y-4">
+        {/* Product Name */}
+        <h3 className="text-lg font-bold text-gray-900 leading-tight line-clamp-2 group-hover:text-[#088395] transition-colors duration-300">
+          {product.name}
+        </h3>
+        {/* Product Description */}
+        <p className="text-sm leading-relaxed text-gray-600 line-clamp-2">
+          {(product.description || '').length > 50 ? product.description.slice(0, 50) + '...' : product.description}
+        </p>
+        {/* Price Section */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center space-x-2">
+            <span className="text-xl font-bold text-[#088395]">
+              ₱{discountedPrice}
+            </span>
+            <span className="text-sm font-medium text-gray-400 line-through">
+              ₱{product.price.toFixed(2)}
+            </span>
           </div>
         </div>
       </div>

@@ -27,10 +27,11 @@ export const Lens = ({
   return (
     <div
       ref={containerRef}
-      className="relative z-20 overflow-hidden rounded-lg"
+      className="relative overflow-hidden rounded-lg"
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onMouseMove={handleMouseMove}
+      style={{ zIndex: 10 }}
     >
       {children}
       <AnimatePresence>
@@ -45,6 +46,7 @@ export const Lens = ({
               maskImage: `radial-gradient(circle ${lensSize / 2}px at ${mousePosition.x}px ${mousePosition.y}px, black 100%, transparent 100%)`,
               WebkitMaskImage: `radial-gradient(circle ${lensSize / 2}px at ${mousePosition.x}px ${mousePosition.y}px, black 100%, transparent 100%)`,
               transformOrigin: `${mousePosition.x}px ${mousePosition.y}px`,
+              zIndex: 20
             }}
           >
             <div

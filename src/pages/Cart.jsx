@@ -47,14 +47,22 @@ const Cart = () => {
 
   useEffect(() => {
     if (products.length > 0) {
-      const tempData = [];
+      const tempDataMap = {};
 
       for (const compositeKey in cartItems) {
         const item = cartItems[compositeKey];
 
-        // Extract base product ID from composite key: "prod123-{"color":"red"}"
+        // Extract base product ID from composite key: "prod123-{\"color\":\"red\"}"
         const baseProductId = compositeKey.split("-")[0];
         const product = products.find((p) => p._id === baseProductId);
+
+        // Normalize variations for consistent key
+        let normalizedVariationKey = 'default';
+        if (item.variations && Object.keys(item.variations).length > 0) {
+          const sortedVariationEntries = Object.entries(item.variations).sort(([a], [b]) => a.localeCompare(b));
+          normalizedVariationKey = JSON.stringify(Object.fromEntries(sortedVariationEntries));
+        }
+        const normalizedKey = `${baseProductId}-${normalizedVariationKey}`;
 
         if (product && item.quantity > 0) {
           let availableStock = product.quantity;
@@ -78,17 +86,22 @@ const Cart = () => {
             availableStock = Math.min(...variationQuantities);
           }
 
-          tempData.push({
-            _id: compositeKey, // Use composite key here so cartData maps correctly
-            quantity: item.quantity,
-            variations: item.variations || null,
-            productData: product,
-            availableStock,
-          });
+          // If already exists, combine quantities
+          if (tempDataMap[normalizedKey]) {
+            tempDataMap[normalizedKey].quantity += item.quantity;
+          } else {
+            tempDataMap[normalizedKey] = {
+              _id: normalizedKey,
+              quantity: item.quantity,
+              variations: item.variations || null,
+              productData: product,
+              availableStock,
+            };
+          }
         }
       }
 
-      setCartData(tempData);
+      setCartData(Object.values(tempDataMap));
       setLoading(false);
     }
   }, [cartItems, products]);
@@ -102,14 +115,10 @@ const Cart = () => {
 
   const getTotalPrice = () => {
     return cartData.reduce((total, item) => {
-      
       const productData = item.productData;
       if (!productData) return total;
 
-      let basePrice = productData.discount
-        ? productData.price * (1 - productData.discount / 100)
-        : productData.price;
-
+      // Calculate variation adjustment
       let variationAdjustment = 0;
       if (item.variations) {
         variationAdjustment = Object.values(item.variations).reduce(
@@ -117,11 +126,15 @@ const Cart = () => {
           0
         );
       }
-      const finalItemPrice = basePrice + variationAdjustment;
-      return total + finalItemPrice * item.quantity;
-      
+      // Calculate base price with variations
+      let basePrice = (productData.price || 0) + variationAdjustment;
+      // Apply discount
+      const discount = productData.discount ? (basePrice * (productData.discount / 100)) : 0;
+      // Round after discount
+      const finalPrice = Math.round((basePrice - discount) * 100) / 100;
+      const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
+      return Math.round((total + itemTotal) * 100) / 100;
     }, 0);
-    
   };
   
 
@@ -244,19 +257,33 @@ const handleQuantityChange = async (itemId, newQuantity) => {
             const productData = item.productData;
             if (!productData) return null;
 
-            let basePrice = productData.discount
-              ? productData.price * (1 - productData.discount / 100)
-              : productData.price;
-
             let variationAdjustment = 0;
+            let maxStock = productData.quantity;
             if (item.variations) {
               variationAdjustment = Object.values(item.variations).reduce(
                 (sum, variation) => sum + (variation.priceAdjustment || 0),
                 0
               );
+              // Find the minimum stock among all selected variations
+              const stocks = Object.entries(item.variations).map(
+                ([variationType, variationData]) => {
+                  const variation = productData.variations?.find(
+                    (v) => v.name === variationType
+                  );
+                  const option = variation?.options.find(
+                    (o) => o.name === variationData.name
+                  );
+                  return option?.quantity || 0;
+                }
+              );
+              if (stocks.length > 0) {
+                maxStock = Math.min(...stocks);
+              }
             }
-
-            const finalPrice = basePrice + variationAdjustment;
+            let basePrice = (productData.price || 0) + variationAdjustment;
+            const discount = productData.discount ? (basePrice * (productData.discount / 100)) : 0;
+            const finalPrice = Math.round((basePrice - discount) * 100) / 100;
+            const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
 
             return (
               <div
@@ -293,8 +320,8 @@ const handleQuantityChange = async (itemId, newQuantity) => {
                       <div className="mt-2 space-y-2">
                         {Object.entries(item.variations).map(
                           ([variationType, variationData]) => {
-                            // Only show the variation if it's actually selected
                             if (variationData && variationData.name) {
+                              // Only show the selected variation
                               const variation = productData.variations?.find(
                                 (v) => v.name === variationType
                               );
@@ -302,34 +329,28 @@ const handleQuantityChange = async (itemId, newQuantity) => {
                                 (o) => o.name === variationData.name
                               );
                               const optionQuantity = option?.quantity || 0;
-
                               return (
                                 <div
                                   key={variationType}
                                   className="pl-3 text-sm border-l-2 border-gray-200"
                                 >
-                                  <div className="flex gap-1">
+                                  <div className="flex gap-1 items-center">
                                     <span className="font-medium capitalize">
                                       {variationType}:
                                     </span>
                                     <span className="text-gray-700">
                                       {variationData.name}
-                                      {/* {variationData.priceAdjustment ? (
+                                      {variationData.priceAdjustment && variationData.priceAdjustment !== 0 ? (
                                         <span className="ml-1 text-xs text-gray-500">
                                           (
-                                          {variationData.priceAdjustment > 0
-                                            ? "+"
-                                            : ""}
+                                          {variationData.priceAdjustment > 0 ? "+" : "-"}
                                           {currency}
-                                          {Math.abs(
-                                            variationData.priceAdjustment
-                                          ).toLocaleString()}
+                                          {Math.abs(variationData.priceAdjustment).toLocaleString()}
                                           )
                                         </span>
-                                      ) : null} */}
+                                      ) : null}
                                     </span>
                                   </div>
-
                                   <div className="flex gap-1 mt-1">
                                     <span className="text-gray-600">
                                       Stock:
@@ -362,7 +383,7 @@ const handleQuantityChange = async (itemId, newQuantity) => {
                   className="px-1 py-1 border max-w-10 sm:max-w-20 sm:px-2"
                   type="number"
                   min={1}
-                  max={item.availableStock}
+                  max={maxStock}
                   value={item.quantity}
                   data-itemid={item._id}
                 />

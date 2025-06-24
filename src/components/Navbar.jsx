@@ -23,6 +23,7 @@ const Navbar = () => {
     token,
     setToken,
     setCartItems,
+    user,
   } = useContext(ShopContext);
   
   const { wishlist } = useContext(WishlistContext);
@@ -202,24 +203,6 @@ const Navbar = () => {
             </NavLink>
           </motion.li>
         ))}
-
-        {userRole === "admin" && (
-          <motion.li 
-            custom={navbarLinks.length}
-            initial="hidden"
-            animate="visible"
-            variants={navLinkVariants}
-          >
-            <a
-              href="http://localhost:5174"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-600 transition-colors duration-300 hover:text-blue-800"
-            >
-              Admin Panel
-            </a>
-          </motion.li>
-        )}
       </ul>
 
       {/* Right Side Icons */}
@@ -240,8 +223,62 @@ const Navbar = () => {
           )}
         </AnimatePresence>
 
-        {/* Profile Icon & Dropdown - Fixed Click Issue */}
-        <div className="relative" ref={profileDropdownRef}>
+        {/* Cart & Wishlist (Hidden for Admin) */}
+        {userRole !== "admin" && (
+          <>
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="hidden lg:block"
+            >
+              <Link 
+                to="/cart" 
+                className="relative block p-2 transition-colors rounded-full hover:bg-gray-100"
+                aria-label="Cart"
+              >
+                <img
+                  src={assets.cart_icon}
+                  className="w-5 h-5"
+                  alt="Cart"
+                />
+                {getCartCount() > 0 && (
+                  <span className="absolute top-0 right-0 w-4 h-4 flex items-center justify-center bg-black text-white rounded-full text-[8px]">
+                    {getCartCount()}
+                  </span>
+                )}
+              </Link>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="hidden lg:block"
+            >
+              <Link 
+                to="/wishlist" 
+                className="relative block p-2 transition-colors rounded-full hover:bg-gray-100"
+                aria-label="Wishlist"
+              >
+                <img
+                  src={assets.wishlist_icon}
+                  className="w-5 h-5"
+                  alt="Wishlist"
+                />
+                {getWishlistCount() > 0 && (
+                  <span className="absolute top-0 right-0 w-4 h-4 flex items-center justify-center bg-black text-white rounded-full text-[8px]">
+                    {getWishlistCount()}
+                  </span>
+                )}
+              </Link>
+            </motion.div>
+          </>
+        )}
+
+        {/* Vertical Divider (desktop only) */}
+        <div className="hidden lg:block h-8 w-px bg-gray-200 mx-2"></div>
+
+        {/* Profile Icon & Dropdown - Always at far right on desktop, hidden on mobile */}
+        <div className="relative ml-2 hidden lg:block" ref={profileDropdownRef}>
           <motion.button
             onClick={() => {
               if (token) {
@@ -250,16 +287,28 @@ const Navbar = () => {
                 navigate("/login");
               }
             }}
-            className="p-2 transition-colors rounded-full hover:bg-gray-100"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            className="p-1.5 transition-colors rounded-full hover:bg-gray-100 border border-gray-200 shadow-sm"
+            whileHover={{ scale: 1.08 }}
+            whileTap={{ scale: 0.97 }}
             aria-label="Profile"
           >
-            <img 
-              src={assets.profile_icon} 
-              className="w-5 h-5" 
-              alt="Profile" 
-            />
+            {token && user && user.profilePicture ? (
+              <img
+                src={user.profilePicture}
+                className="w-8 h-8 object-cover rounded-full border border-gray-300 shadow-sm"
+                alt="Profile"
+              />
+            ) : token && user && user.firstName ? (
+              <div className="w-8 h-8 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold text-base border border-gray-300 shadow-sm">
+                {user.firstName[0]}
+              </div>
+            ) : (
+              <img
+                src={assets.profile_icon}
+                className="w-6 h-6"
+                alt="Profile"
+              />
+            )}
           </motion.button>
           
           {token && profileDropdownOpen && (
@@ -310,55 +359,6 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* Cart & Wishlist (Hidden for Admin) */}
-        {userRole !== "admin" && (
-          <>
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Link 
-                to="/cart" 
-                className="relative block p-2 transition-colors rounded-full hover:bg-gray-100"
-                aria-label="Cart"
-              >
-                <img
-                  src={assets.cart_icon}
-                  className="w-5 h-5"
-                  alt="Cart"
-                />
-                {getCartCount() > 0 && (
-                  <span className="absolute top-0 right-0 w-4 h-4 flex items-center justify-center bg-black text-white rounded-full text-[8px]">
-                    {getCartCount()}
-                  </span>
-                )}
-              </Link>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Link 
-                to="/wishlist" 
-                className="relative block p-2 transition-colors rounded-full hover:bg-gray-100"
-                aria-label="Wishlist"
-              >
-                <img
-                  src={assets.wishlist_icon}
-                  className="w-5 h-5"
-                  alt="Wishlist"
-                />
-                {getWishlistCount() > 0 && (
-                  <span className="absolute top-0 right-0 w-4 h-4 flex items-center justify-center bg-black text-white rounded-full text-[8px]">
-                    {getWishlistCount()}
-                  </span>
-                )}
-              </Link>
-            </motion.div>
-          </>
-        )}
-
         {/* Mobile Menu Toggle */}
         <motion.button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -390,10 +390,45 @@ const Navbar = () => {
             exit="closed"
             variants={mobileMenuVariants}
             transition={{ type: "tween", duration: 0.3 }}
-            className="fixed inset-0 z-40 bg-white"
+            className="fixed inset-0 z-40 flex justify-end bg-black/30"
             ref={dropdownRef}
           >
-            <div className="flex flex-col h-full px-6 pt-20 overflow-y-auto">
+            <div className="flex flex-col h-full w-full max-w-xs bg-white px-4 pt-10 pb-6 rounded-l-2xl shadow-2xl overflow-y-auto">
+              {/* Mobile Profile Avatar & Info */}
+              {token && (
+                <div className="flex flex-col items-center gap-1 mb-4">
+                  {user && user.profilePicture ? (
+                    <img
+                      src={user.profilePicture}
+                      className="w-10 h-10 object-cover rounded-full border border-gray-300 shadow"
+                      alt="Profile"
+                    />
+                  ) : user && user.firstName ? (
+                    <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold text-lg border border-gray-300 shadow">
+                      {user.firstName[0]}
+                    </div>
+                  ) : (
+                    <img
+                      src={assets.profile_icon}
+                      className="w-8 h-8"
+                      alt="Profile"
+                    />
+                  )}
+                  <div className="text-sm font-semibold text-gray-800">
+                    {user && user.firstName ? user.firstName : "My Account"}
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigate("/profile");
+                      setMobileMenuOpen(false);
+                    }}
+                    className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-full shadow hover:bg-blue-700 transition"
+                  >
+                    View Profile
+                  </button>
+                </div>
+              )}
+              
               {!token && (
                 <div className="flex items-center px-4 py-4 mb-4 text-sm text-red-600 rounded-lg bg-red-50">
                   <span className="w-2 h-2 mr-2 bg-red-500 rounded-full"></span>
@@ -420,26 +455,6 @@ const Navbar = () => {
                     </NavLink>
                   </motion.li>
                 ))}
-                
-                {userRole === "admin" && (
-                  <motion.li
-                    custom={navbarLinks.length}
-                    variants={navLinkVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="py-2 border-b border-gray-100"
-                  >
-                    <a
-                      href="http://localhost:5174"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      Admin Panel
-                    </a>
-                  </motion.li>
-                )}
               </ul>
               
               {token && (

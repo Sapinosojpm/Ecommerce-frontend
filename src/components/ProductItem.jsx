@@ -3,7 +3,7 @@ import { ShopContext } from "../context/ShopContext";
 import { Link } from "react-router-dom";
 import { useSpring, animated } from "@react-spring/web";
 
-const ProductItem = ({ id, name, price, discount, image, video, quantity, description }) => {
+const ProductItem = ({ id, name, price, discount, image, video, quantity, description, displayPrice }) => {
   const { currency, handleBuyNow } = useContext(ShopContext);
   const [productData, setProductData] = useState({
     _id: id,
@@ -60,9 +60,7 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
     }
   };
 
-  const finalPrice = productData.discount
-    ? price - price * (productData.discount / 100)
-    : price;
+  const mainPrice = typeof displayPrice === 'number' ? displayPrice : (discount ? price - price * (discount / 100) : price);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -172,10 +170,10 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
         {/* Price Section */}
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center space-x-2">
-            {productData.discount ? (
+            {discount ? (
               <div className="flex items-center space-x-2">
                 <span className="text-xl font-bold text-[#088395]">
-                  {currency}{finalPrice.toLocaleString()}
+                  {currency}{mainPrice.toLocaleString()}
                 </span>
                 <span className="text-sm font-medium text-gray-400 line-through">
                   {currency}{price.toLocaleString()}
@@ -183,7 +181,7 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
               </div>
             ) : (
               <span className="text-xl font-bold text-gray-900">
-                {currency}{price.toLocaleString()}
+                {currency}{mainPrice.toLocaleString()}
               </span>
             )}
           </div>

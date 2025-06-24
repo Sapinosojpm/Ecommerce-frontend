@@ -4,4 +4,13 @@
   .backface-hidden {
     backface-visibility: hidden;
   }
+
+  .product-image-container {
+    position: relative;
+    z-index: 1;
+  }
+
+  .product-lens {
+    z-index: 1;
+  }
   

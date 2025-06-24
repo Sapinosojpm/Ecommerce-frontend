@@ -32,42 +32,49 @@ const FAQPage = ({ isOpen, onClose }) => {
         isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
       }`}
     >
-      <div className="relative w-11/12 max-w-3xl p-6 bg-white rounded-lg shadow-lg outline outline-2 outline-gray-400">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute text-xl text-gray-600 top-2 right-2 hover:text-gray-800"
-        >
-          &times;
-        </button>
-        <h1 className="mb-8 text-3xl font-bold text-center text-gray-800">
-          Frequently Asked Questions
-        </h1>
-        <div className="space-y-4">
-          {faqs.map((faq, index) => (
-            <div
-              key={index}
-              className="p-4 bg-white border border-gray-300 rounded-lg shadow-md"
-            >
+      <div className="relative w-11/12 max-w-2xl p-0 animate-fadeIn">
+        <div className="relative bg-white rounded-3xl shadow-2xl border border-gray-200 px-8 pt-8 pb-8">
+          {/* Floating Close Button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-gray-400 bg-gray-100 rounded-full hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400 z-10"
+            aria-label="Close"
+          >
+            <span className="text-2xl">&times;</span>
+          </button>
+          <h1 className="mb-8 text-3xl font-bold text-center text-gray-800 tracking-tight">
+            Frequently Asked Questions
+          </h1>
+          <div className="space-y-5">
+            {faqs.map((faq, index) => (
               <div
-                className="flex items-center justify-between cursor-pointer"
-                onClick={() => toggleFAQ(index)}
+                key={index}
+                className="p-5 bg-gray-50 border border-gray-200 rounded-xl shadow-sm transition-all duration-200 hover:shadow-md"
               >
-                <h3 className="text-lg font-medium text-gray-800">{faq.question}</h3>
-                <span
-                  className={`text-xl font-bold transition-transform ${
-                    activeIndex === index ? "rotate-180" : "rotate-0"
-                  }`}
+                <div
+                  className="flex items-center justify-between cursor-pointer select-none"
+                  onClick={() => toggleFAQ(index)}
                 >
-                  {activeIndex === index ? "-" : "+"}
-                </span>
+                  <h3 className="text-lg font-semibold text-gray-800">{faq.question}</h3>
+                  <span
+                    className={`text-2xl font-bold transition-transform ${
+                      activeIndex === index ? "rotate-180 text-blue-600" : "rotate-0 text-gray-400"
+                    }`}
+                  >
+                    {activeIndex === index ? "-" : "+"}
+                  </span>
+                </div>
+                {activeIndex === index && (
+                  <p className="mt-4 text-gray-700 whitespace-pre-line transition-all duration-200">{faq.answer}</p>
+                )}
               </div>
-              {activeIndex === index && (
-                <p className="mt-4 text-gray-600 whitespace-pre-line">{faq.answer}</p>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+        <style>{`
+          @keyframes fadeIn { from { opacity: 0; transform: translateY(20px);} to { opacity: 1; transform: none; } }
+          .animate-fadeIn { animation: fadeIn 0.5s ease; }
+        `}</style>
       </div>
     </div>
   );

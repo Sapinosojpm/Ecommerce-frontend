@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { FiTruck, FiMapPin, FiPlus, FiX, FiRefreshCw } from 'react-icons/fi';
+import TrackingMap from '../components/TrackingMap';
 
 const Orders = () => {
   // ===== Context & State =====
@@ -249,39 +250,121 @@ const Orders = () => {
                 </div>
 
                 {/* ===== Order Items ===== */}
-                <div className="divide-y divide-gray-100">
-                  {order.items.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col px-6 py-4 md:flex-row md:items-center md:justify-between"
-                    >
-                      <div className="flex items-start gap-4">
-                        <img
-                          className="object-cover w-16 h-16 rounded"
-                          src={item.image?.[0] || '/placeholder-product.jpg'}
-                          alt={item.name}
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-800 line-clamp-2">
-                            {item.name}
-                          </p>
-                          <div className="mt-1 text-sm text-gray-500">
-                            <span>Qty: {item.quantity}</span>
-                            {item.discount > 0 && (
-                              <span className="ml-2 text-red-500">
-                                -{item.discount}% OFF
-                              </span>
-                            )}
+                <div className="px-6 py-4">
+                  <div className="mb-2 text-base font-semibold text-blue-700">Order Items</div>
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full text-xs border border-gray-200 rounded-lg bg-blue-50">
+                      <thead className="sticky top-0 z-10 bg-blue-100">
+                        <tr className="text-blue-900">
+                          <th className="px-2 py-1 text-left">Image</th>
+                          <th className="px-2 py-1 text-left">Product</th>
+                          <th className="px-2 py-1 text-left">Variation(s)</th>
+                          <th className="px-2 py-1 text-right">Base Price</th>
+                          <th className="px-2 py-1 text-right">Variation Adj.</th>
+                          <th className="px-2 py-1 text-right">Discount</th>
+                          <th className="px-2 py-1 text-right">Final Price</th>
+                          <th className="px-2 py-1 text-right">Qty</th>
+                          <th className="px-2 py-1 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {order.items.map((item, index) => {
+                          let variationAdjustment = 0;
+                          if (item.variationDetails && Array.isArray(item.variationDetails)) {
+                            variationAdjustment = item.variationDetails.reduce(
+                              (sum, v) => sum + (v.priceAdjustment || 0),
+                              0
+                            );
+                          }
+                          let basePrice = (item.price || 0) + variationAdjustment;
+                          const discount = item.discount ? (basePrice * (item.discount / 100)) : 0;
+                          const finalPrice = Math.round((basePrice - discount) * 100) / 100;
+                          const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
+                          return (
+                            <tr key={index} className="border-t border-gray-200">
+                              <td className="px-2 py-1">
+                                <img
+                                  src={item.image?.[0] || '/placeholder-product.jpg'}
+                                  alt={item.name}
+                                  className="w-12 h-12 object-cover rounded"
+                                />
+                              </td>
+                              <td className="px-2 py-1 font-medium text-gray-800">{item.name}</td>
+                              <td className="px-2 py-1 text-green-700">
+                                {item.variationDetails?.length > 0 ? (
+                                  item.variationDetails.map((v, idx) => (
+                                    <div key={idx}>
+                                      <span className="font-semibold">{v.variationName}</span>: {v.optionName}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <span className="italic text-gray-400">None</span>
+                                )}
+                              </td>
+                              <td className="px-2 py-1 text-right">{formatPrice(item.price || 0)}</td>
+                              <td className="px-2 py-1 text-right">{formatPrice(variationAdjustment)}</td>
+                              <td className="px-2 py-1 text-right text-red-600">-{formatPrice(discount)}</td>
+                              <td className="px-2 py-1 text-right text-blue-900 font-semibold">{formatPrice(finalPrice)}</td>
+                              <td className="px-2 py-1 text-right">{item.quantity}</td>
+                              <td className="px-2 py-1 text-right font-bold text-green-700">{formatPrice(itemTotal)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* ===== Order Summary ===== */}
+                <div className="px-6 pb-4">
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="mb-2 text-base font-semibold text-blue-700">Order Summary</div>
+                    {(() => {
+                      const subtotal = order.items.reduce((sum, item) => {
+                        let variationAdjustment = 0;
+                        if (item.variationDetails && Array.isArray(item.variationDetails)) {
+                          variationAdjustment = item.variationDetails.reduce(
+                            (s, v) => s + (v.priceAdjustment || 0),
+                            0
+                          );
+                        }
+                        let basePrice = (item.price || 0) + variationAdjustment;
+                        const discount = item.discount ? (basePrice * (item.discount / 100)) : 0;
+                        const finalPrice = Math.round((basePrice - discount) * 100) / 100;
+                        const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
+                        return Math.round((sum + itemTotal) * 100) / 100;
+                      }, 0);
+                      const total = Math.round((subtotal + (order.shippingFee || 0)) * 100) / 100;
+                      return (
+                        <div className="flex flex-col gap-1 text-sm text-gray-700">
+                          <div className="flex justify-between">
+                            <span>Subtotal:</span>
+                            <span className="font-semibold">{formatPrice(subtotal)}</span>
+                          </div>
+                          {order.voucherAmount > 0 && order.discountAmount === 0 && (
+                            <div className="flex justify-between">
+                              <span>Discount:</span>
+                              <span className="text-red-600">-{formatPrice(order.voucherAmount)}</span>
+                            </div>
+                          )}
+                          {order.discountAmount > 0 && order.voucherAmount === 0 && (
+                            <div className="flex justify-between">
+                              <span>Discount:</span>
+                              <span className="text-red-600">-{formatPrice(order.discountAmount)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span>Shipping Fee:</span>
+                            <span>{order.shippingFee !== undefined ? formatPrice(order.shippingFee) : 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between text-lg font-bold text-blue-900 mt-2 border-t pt-2 border-blue-200">
+                            <span>Total Payment:</span>
+                            <span>{formatPrice(total)}</span>
                           </div>
                         </div>
-                      </div>
-                      <div className="mt-3 text-right md:mt-0">
-                        <p className="font-medium text-gray-800">
-                          {formatPrice(item.price)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })()}
+                  </div>
                 </div>
 
                 {/* ===== Order Footer ===== */}
@@ -302,22 +385,45 @@ const Orders = () => {
                       </p>
                     </div>
                     <div className="text-right">
-                      {/* Show shipping fee and breakdown */}
-                      <>
-                        <p className="text-sm text-gray-500">
-                          Subtotal: {formatPrice(order.shippingFee !== undefined ? order.amount - order.shippingFee : order.amount)}
-                        </p>
-                        {order.voucherAmount > 0 && (
-                          <p className="text-sm text-gray-500">Discount: -{formatPrice(order.voucherAmount)}</p>
-                        )}
-                        <p className="text-sm text-gray-500">
-                          Shipping Fee: {order.shippingFee !== undefined ? formatPrice(order.shippingFee) : 'N/A'}
-                        </p>
-                      </>
-                      <p className="text-sm text-gray-500">Total Payment:</p>
-                      <p className="text-lg font-semibold text-blue-600">
-                        {formatPrice(order.amount)}
-                      </p>
+                      {/* Calculate subtotal as sum of all item totals, rounding after each step */}
+                      {(() => {
+                        const subtotal = order.items.reduce((sum, item) => {
+                          let variationAdjustment = 0;
+                          if (item.variationDetails && Array.isArray(item.variationDetails)) {
+                            variationAdjustment = item.variationDetails.reduce(
+                              (s, v) => s + (v.priceAdjustment || 0),
+                              0
+                            );
+                          }
+                          let basePrice = (item.price || 0) + variationAdjustment;
+                          const discount = item.discount ? (basePrice * (item.discount / 100)) : 0;
+                          const finalPrice = Math.round((basePrice - discount) * 100) / 100;
+                          const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
+                          return Math.round((sum + itemTotal) * 100) / 100;
+                        }, 0);
+                        const total = Math.round((subtotal + (order.shippingFee || 0)) * 100) / 100;
+                        return (
+                          <>
+                            <p className="text-sm text-gray-500">
+                              Subtotal: {formatPrice(subtotal)}
+                            </p>
+                            {/* Show only one discount type at a time */}
+                            {order.voucherAmount > 0 && order.discountAmount === 0 && (
+                              <p className="text-sm text-gray-500">Discount: -{formatPrice(order.voucherAmount)}</p>
+                            )}
+                            {order.discountAmount > 0 && order.voucherAmount === 0 && (
+                              <p className="text-sm text-gray-500">Discount: -{formatPrice(order.discountAmount)}</p>
+                            )}
+                            <p className="text-sm text-gray-500">
+                              Shipping Fee: {order.shippingFee !== undefined ? formatPrice(order.shippingFee) : 'N/A'}
+                            </p>
+                            <p className="text-sm text-gray-500">Total Payment:</p>
+                            <p className="text-lg font-semibold text-blue-600">
+                              {formatPrice(total)}
+                            </p>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                   {/* ===== Action Buttons ===== */}
@@ -344,7 +450,7 @@ const Orders = () => {
       {/* ===================== Tracking Modal ===================== */}
       {showTrackingModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b">
               <h3 className="text-lg font-semibold">Tracking Information</h3>
               <button
@@ -364,8 +470,11 @@ const Orders = () => {
                   <h4 className="mb-2 text-lg font-medium text-red-700">Tracking Error</h4>
                   <p className="text-sm text-red-600">{trackingError.errorMessage}</p>
                 </div>
-              ) : trackingInfo ? (
+              ) : (
                 <div className="space-y-4">
+                  {/* ===== Map View ===== */}
+                  <TrackingMap trackingInfo={trackingInfo} isVisible={!trackingError} />
+
                   {/* ===== Tracking Details ===== */}
                   <div className="p-4 mb-4 rounded-lg bg-gray-50">
                     <div className="flex items-center justify-between mb-2">
@@ -387,6 +496,7 @@ const Orders = () => {
                       </span>
                     </div>
                   </div>
+
                   {/* ===== Tracking History ===== */}
                   {trackingInfo.origin_info?.trackinfo?.length > 0 ? (
                     <div className="space-y-4">
@@ -428,11 +538,8 @@ const Orders = () => {
                     </div>
                   )}
                 </div>
-              ) : (
-                <div className="py-4 text-center text-gray-500">
-                  Loading tracking information...
-                </div>
               )}
+
               {/* ===== Modal Actions ===== */}
               <div className="flex gap-3 mt-6">
                 <button

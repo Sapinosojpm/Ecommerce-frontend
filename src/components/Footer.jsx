@@ -172,10 +172,14 @@ useEffect(() => {
             <div className="flex items-center space-x-2">
               <span className="text-xs text-gray-500">We accept:</span>
               <div className="flex space-x-2">
-                <div className="flex items-center justify-center w-8 h-5 text-xs font-bold text-white bg-blue-600 rounded">V</div>
-                <div className="flex items-center justify-center w-8 h-5 text-xs font-bold text-white bg-red-600 rounded">M</div>
-                <div className="flex items-center justify-center w-8 h-5 text-xs font-bold text-white bg-blue-400 rounded">A</div>
-                <div className="flex items-center justify-center w-8 h-5 text-xs font-bold text-white bg-yellow-500 rounded">P</div>
+                <img src={assets.stripe_logo} alt="Stripe" className="h-5 w-auto object-contain" />
+                <div className="flex items-center justify-center h-5 px-2 bg-blue-100 rounded text-blue-600 text-xs font-medium">
+                  <svg className="w-4 h-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Upload Receipt
+                </div>
+                <img src={assets.gcash} alt="GCash" className="h-5 w-auto object-contain" />
               </div>
             </div>
           </div>
