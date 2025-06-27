@@ -117,7 +117,29 @@ const PlaceOrder = () => {
           ? buyNowItem.variationDetails.reduce((sum, v) => sum + (v.priceAdjustment || 0), 0)
           : 0,
         quantity: buyNowItem.quantity,
-        variationDetails: buyNowItem.variationDetails || []
+        variationDetails: buyNowItem.variationDetails || [],
+        // Calculate finalPrice for buyNowItem
+        finalPrice: (() => {
+          const capitalValue = buyNowItem.capital || 0;
+          let markup = 0;
+          if (buyNowItem.additionalCapital) {
+            if (buyNowItem.additionalCapital.type === 'percent') {
+              markup = capitalValue * (buyNowItem.additionalCapital.value / 100);
+            } else {
+              markup = buyNowItem.additionalCapital.value || 0;
+            }
+          }
+          const subtotalBase = capitalValue + markup;
+          const vatPercent = buyNowItem.vat || 0;
+          const vatAmount = subtotalBase * (vatPercent / 100);
+          const basePrice = subtotalBase + vatAmount;
+          const discountPercent = buyNowItem.discount || 0;
+          const variationAdjustment = buyNowItem.variationAdjustment || 0;
+          const discountedPrice = (basePrice * (1 - discountPercent / 100)) + variationAdjustment;
+          const priceWithVariation = basePrice + variationAdjustment;
+          const finalPrice = discountPercent > 0 ? discountedPrice : priceWithVariation;
+          return Math.round(finalPrice * 100) / 100;
+        })()
       }]
     : Object.keys(cartItems)
         .filter((itemId) => cartItems[itemId]?.quantity > 0)
@@ -131,6 +153,24 @@ const PlaceOrder = () => {
             (sum, v) => sum + (v.priceAdjustment || 0),
             0
           );
+          // Calculate finalPrice for each cart item
+          const capitalValue = itemInfo.capital || 0;
+          let markup = 0;
+          if (itemInfo.additionalCapital) {
+            if (itemInfo.additionalCapital.type === 'percent') {
+              markup = capitalValue * (itemInfo.additionalCapital.value / 100);
+            } else {
+              markup = itemInfo.additionalCapital.value || 0;
+            }
+          }
+          const subtotalBase = capitalValue + markup;
+          const vatPercent = itemInfo.vat || 0;
+          const vatAmount = subtotalBase * (vatPercent / 100);
+          const basePrice = subtotalBase + vatAmount;
+          const discountPercent = itemInfo.discount || 0;
+          const discountedPrice = (basePrice * (1 - discountPercent / 100)) + variationAdjustment;
+          const priceWithVariation = basePrice + variationAdjustment;
+          const finalPrice = discountPercent > 0 ? discountedPrice : priceWithVariation;
           return {
             ...itemInfo,
             _id: itemInfo._id,
@@ -141,7 +181,8 @@ const PlaceOrder = () => {
               variationName,
               optionName: option.name,
               priceAdjustment: option.priceAdjustment || 0
-            }))
+            })),
+            finalPrice: Math.round(finalPrice * 100) / 100
           };
         })
         .filter(Boolean);
