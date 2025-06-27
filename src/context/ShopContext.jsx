@@ -47,14 +47,8 @@ const ShopContextProvider = (props) => {
   // Initialize token from localStorage immediately
   const [token, setToken] = useState(localStorage.getItem("token") || "");
   const navigate = useNavigate();
-  const [cartItems, setCartItems] = useState(() => {
-    const savedToken = localStorage.getItem("token");
-    if (!savedToken) {
-      const savedCart = JSON.parse(localStorage.getItem("cartItems") || "{}");
-      return savedCart;
-    }
-    return {}; // Will be populated by getUserCart
-  });
+  // Initialize cartItems as an empty object (no localStorage)
+  const [cartItems, setCartItems] = useState({});
 
   // Add this to your ShopContext.jsx
   
@@ -266,8 +260,10 @@ const ShopContextProvider = (props) => {
 
   // Save cart to localStorage whenever cartItems change
   useEffect(() => {
-    localStorage.setItem("cartItems", JSON.stringify(cartItems));
-  }, [cartItems]);
+    if (!token) {
+      localStorage.setItem("cartItems", JSON.stringify(cartItems));
+    }
+  }, [cartItems, token]);
 
   useEffect(() => {
     getProductsData();
@@ -439,7 +435,7 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
 
   if (token) {
     try {
-      await axios.post(
+      const response = await axios.post(
         `${backendUrl}/api/cart/add`,
         {
           userId: localStorage.getItem("userId"),
@@ -452,10 +448,18 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      if (!response.data.success) {
+        toast.error(response.data.message || "Failed to add to cart.");
+        setCartItems(cartItems); // revert local state
+        return;
+      }
     } catch (error) {
       console.error("Failed to update cart in the database:", error);
-      toast.error("Failed to update the cart. Please try again.");
-      setCartItems(cartItems);
+      toast.error(
+        error.response?.data?.message ||
+        "Failed to update the cart. Please try again."
+      );
+      setCartItems(cartItems); // revert local state
     }
   }
 };
@@ -661,7 +665,7 @@ const updateQuantity = async (itemId, newQuantity) => {
       if (token) {
         await axios.post(
           `${backendUrl}/api/cart/remove`,
-          { itemId },
+          { userId: localStorage.getItem("userId"), itemId },
           { headers: { Authorization: `Bearer ${token}` } }
         );
       }
@@ -760,22 +764,24 @@ const updateQuantity = async (itemId, newQuantity) => {
 
   const clearCart = async () => {
     if (!token) {
-      toast.error("You need to be logged in to clear the cart.");
+      setCartItems({});
+      // localStorage.removeItem("cartItems"); // Removed: do not use localStorage
+      toast.info("Cart has been cleared.");
       return;
     }
 
     try {
-      const response = await axios.delete(`${backendUrl}/api/cart/clear`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await axios.delete(
+        `${backendUrl}/api/cart/clear`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          data: { userId: localStorage.getItem("userId") }
+        }
+      );
 
-      if (response.data.success) {
-        setCartItems({});
-        localStorage.removeItem("cartItems");
-        toast.info("Cart has been cleared.");
-      } else {
-        toast.error(response.data.message || "Failed to clear cart.");
-      }
+      setCartItems({});
+      // Do NOT remove from localStorage if logged in
+      toast.info("Cart has been cleared.");
     } catch (error) {
       console.error(
         "Error clearing cart:",

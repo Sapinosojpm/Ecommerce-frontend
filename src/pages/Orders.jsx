@@ -170,6 +170,33 @@ const Orders = () => {
     }
   }, [location.state, setCartItems, setVoucherAmountDiscount]);
 
+  // Stripe payment verification after redirect
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const paymentSuccess = params.get("paymentSuccess");
+    const orderId = params.get("orderId");
+    if (paymentSuccess === "true" && orderId) {
+      axios.post(
+        `${backendUrl}/api/order/verify-stripe`,
+        { orderId },
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+        .then((res) => {
+          if (res.data.success) {
+            toast.success("Payment verified and order marked as paid!");
+            loadOrderData();
+          } else {
+            toast.error(res.data.message || "Failed to verify payment.");
+          }
+        })
+        .catch((err) => {
+          toast.error(
+            err?.response?.data?.message || "Failed to verify payment."
+          );
+        });
+    }
+  }, [location.search, backendUrl, token]);
+
   // ===================== UI Tabs =====================
   const tabs = [
     { id: "all", label: "All" },
@@ -688,7 +715,7 @@ const handlePayNow = async (order) => {
   console.log('Pay Now API URL:', apiUrl);
   try {
     // Call backend to get payment link
-    const { data } = await axios.post(apiUrl, {}, { headers: { token } });
+    const { data } = await axios.post(apiUrl, {}, { headers: { Authorization: `Bearer ${token}` } });
     if (data.session_url) {
       window.location.href = data.session_url; // Redirect to Stripe Checkout
     } else {
