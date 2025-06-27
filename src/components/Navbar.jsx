@@ -393,116 +393,189 @@ const Navbar = () => {
             className="fixed inset-0 z-40 flex justify-end bg-black/30"
             ref={dropdownRef}
           >
-            <div className="flex flex-col h-full w-full max-w-xs bg-white px-4 pt-10 pb-6 rounded-l-2xl shadow-2xl overflow-y-auto">
-              {/* Mobile Profile Avatar & Info */}
-              {token && (
-                <div className="flex flex-col items-center gap-1 mb-4">
-                  {user && user.profilePicture ? (
-                    <img
-                      src={user.profilePicture}
-                      className="w-10 h-10 object-cover rounded-full border border-gray-300 shadow"
-                      alt="Profile"
-                    />
-                  ) : user && user.firstName ? (
-                    <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold text-lg border border-gray-300 shadow">
-                      {user.firstName[0]}
+            <div className="flex flex-col h-full w-full max-w-xs bg-white px-4 pt-8 pb-6 rounded-l-2xl shadow-2xl overflow-y-auto relative">
+              {/* Close Button */}
+              <button
+                className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-100 focus:outline-none"
+                onClick={() => setMobileMenuOpen(false)}
+                aria-label="Close menu"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              {/* Profile Section */}
+              <div className="mb-6">
+                <h3 className="mb-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Account</h3>
+                {token ? (
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-100">
+                    {user && user.profilePicture ? (
+                      <img
+                        src={user.profilePicture}
+                        className="w-10 h-10 object-cover rounded-full"
+                        alt="Profile"
+                      />
+                    ) : user && user.firstName && user.lastName ? (
+                      <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-blue-700 text-white font-bold text-sm">
+                        {user.firstName[0] + user.lastName[0]}
+                      </div>
+                    ) : (
+                      <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100">
+                        <img
+                          src={assets.profile_icon}
+                          className="w-5 h-5"
+                          alt="Profile"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">
+                        {user && (user.firstName || user.lastName) ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : "My Account"}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {user && user.email ? user.email : "Welcome back"}
+                      </div>
                     </div>
-                  ) : (
-                    <img
-                      src={assets.profile_icon}
-                      className="w-8 h-8"
-                      alt="Profile"
-                    />
-                  )}
-                  <div className="text-sm font-semibold text-gray-800">
-                    {user && user.firstName ? user.firstName : "My Account"}
                   </div>
-                  <button
-                    onClick={() => {
-                      navigate("/profile");
-                      setMobileMenuOpen(false);
-                    }}
-                    className="px-3 py-1 text-xs font-medium text-white bg-blue-600 rounded-full shadow hover:bg-blue-700 transition"
-                  >
-                    View Profile
-                  </button>
-                </div>
-              )}
-              
-              {!token && (
-                <div className="flex items-center px-4 py-4 mb-4 text-sm text-red-600 rounded-lg bg-red-50">
-                  <span className="w-2 h-2 mr-2 bg-red-500 rounded-full"></span>
-                  You are not logged in
-                </div>
-              )}
-              
-              <ul className="mb-8 space-y-4">
-                {navbarLinks.map((link, i) => (
-                  <motion.li 
-                    key={link._id}
-                    custom={i}
-                    variants={navLinkVariants}
-                    initial="hidden"
-                    animate="visible"
-                    className="py-2 border-b border-gray-100"
-                  >
-                    <NavLink 
-                      to={link.path} 
-                      className={({ isActive }) => isActive ? "text-black font-semibold" : "text-gray-600"}
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      {link.name}
-                    </NavLink>
-                  </motion.li>
-                ))}
-              </ul>
-              
+                ) : (
+                  <div className="flex items-center px-3 py-3 text-sm text-red-600 rounded-lg border border-red-200 bg-red-50">
+                    <span className="w-2 h-2 mr-3 bg-red-500 rounded-full"></span>
+                    <div>
+                      <div className="font-medium">Not logged in</div>
+                      <div className="text-xs text-red-500">Please sign in to continue</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Actions */}
               {token && (
-                <div className="mt-auto mb-12 space-y-3">
-                  <h3 className="mb-2 text-sm font-semibold text-gray-400 uppercase">Account</h3>
-                  <button
-                    onClick={() => {
-                      navigate("/profile");
-                      setMobileMenuOpen(false);
-                    }}
-                    className="flex items-center w-full py-2 text-gray-700"
-                  >
-                    <span className="mr-2">
-                      <img src={assets.profile_icon} className="w-5 h-5" alt="Profile" />
-                    </span>
-                    Profile
-                  </button>
-                  
-                  {userRole !== "admin" && (
+                <div className="mb-6">
+                  <div className="flex items-center justify-center gap-8">
+                    {/* Profile Button */}
                     <button
                       onClick={() => {
-                        navigate("/orders");
+                        navigate("/profile");
                         setMobileMenuOpen(false);
                       }}
-                      className="flex items-center w-full py-2 text-gray-700"
+                      className="flex flex-col items-center p-2 transition-colors rounded-full hover:bg-gray-100"
                     >
-                      <span className="mr-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <img
+                        src={assets.profile_icon}
+                        className="w-6 h-6 mb-1"
+                        alt="Profile"
+                      />
+                      <span className="text-xs text-gray-700">Profile</span>
+                    </button>
+
+                    {/* Cart Button (non-admin only) */}
+                    {userRole !== "admin" && (
+                      <button
+                        onClick={() => {
+                          navigate("/cart");
+                          setMobileMenuOpen(false);
+                        }}
+                        className="relative flex flex-col items-center p-2 transition-colors rounded-full hover:bg-gray-100"
+                      >
+                        <img
+                          src={assets.cart_icon}
+                          className="w-6 h-6 mb-1"
+                          alt="Cart"
+                        />
+                        <span className="text-xs text-gray-700">Cart</span>
+                        {getCartCount() > 0 && (
+                          <span className="absolute top-0 right-0 w-4 h-4 flex items-center justify-center bg-black text-white rounded-full text-[10px]">
+                            {getCartCount()}
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Wishlist Button (non-admin only) */}
+                    {userRole !== "admin" && (
+                      <button
+                        onClick={() => {
+                          navigate("/wishlist");
+                          setMobileMenuOpen(false);
+                        }}
+                        className="relative flex flex-col items-center p-2 transition-colors rounded-full hover:bg-gray-100"
+                      >
+                        <img
+                          src={assets.wishlist_icon}
+                          className="w-6 h-6 mb-1"
+                          alt="Wishlist"
+                        />
+                        <span className="text-xs text-gray-700">Wishlist</span>
+                        {getWishlistCount() > 0 && (
+                          <span className="absolute top-0 right-0 w-4 h-4 flex items-center justify-center bg-black text-white rounded-full text-[10px]">
+                            {getWishlistCount()}
+                          </span>
+                        )}
+                      </button>
+                    )}
+
+                    {/* Orders Button (non-admin only) */}
+                    {userRole !== "admin" && (
+                      <button
+                        onClick={() => {
+                          navigate("/orders");
+                          setMobileMenuOpen(false);
+                        }}
+                        className="flex flex-col items-center p-2 transition-colors rounded-full hover:bg-gray-100"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
                         </svg>
-                      </span>
-                      Orders
-                    </button>
-                  )}
-                  
+                        <span className="text-xs text-gray-700">Orders</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Navigation Section */}
+              <div className="mb-6">
+                <h3 className="mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Navigation</h3>
+                <ul className="space-y-1">
+                  {navbarLinks.map((link, i) => (
+                    <motion.li 
+                      key={link._id}
+                      custom={i}
+                      variants={navLinkVariants}
+                      initial="hidden"
+                      animate="visible"
+                    >
+                      <NavLink 
+                        to={link.path} 
+                        className={({ isActive }) => 
+                          isActive 
+                            ? "block px-3 py-2 rounded-md bg-black text-white font-medium" 
+                            : "block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                        }
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        {link.name}
+                      </NavLink>
+                    </motion.li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Logout Button (if logged in) */}
+              {token && (
+                <div className="mt-auto pt-4 border-t border-gray-100">
                   <button
                     onClick={() => {
                       logout();
                       setMobileMenuOpen(false);
                     }}
-                    className="flex items-center w-full py-2 text-red-600"
+                    className="flex items-center justify-center w-full px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
                   >
-                    <span className="mr-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                      </svg>
-                    </span>
-                    Logout
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                    </svg>
+                    Sign Out
                   </button>
                 </div>
               )}

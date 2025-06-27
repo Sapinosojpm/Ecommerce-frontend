@@ -38,7 +38,11 @@ const ShopContextProvider = (props) => {
     amount: 0,
     minimumPurchase: 0,
   });
-  const [buyNowItem, setBuyNowItem] = useState(null);
+  const [buyNowItem, setBuyNowItemState] = useState(() => {
+    // Try to load from localStorage on first render
+    const stored = localStorage.getItem("buyNowItem");
+    return stored ? JSON.parse(stored) : null;
+  });
    const [products, setProducts] = useState([]);
   // Initialize token from localStorage immediately
   const [token, setToken] = useState(localStorage.getItem("token") || "");
@@ -107,6 +111,13 @@ const ShopContextProvider = (props) => {
         0
       );
 
+      // Build variationDetails array for consistency
+      const variationDetails = Object.entries(selectedVariations).map(([variationName, option]) => ({
+        variationName,
+        optionName: option.name,
+        priceAdjustment: option.priceAdjustment || 0
+      }));
+
       const itemWithVariations = {
         ...itemInfo,
         quantity,
@@ -115,6 +126,7 @@ const ShopContextProvider = (props) => {
         originalPrice: itemInfo.price,
         variationAdjustment,
         weight: itemInfo.weight || 0,
+        variationDetails,
       };
 
       setBuyNowItem(itemWithVariations);
@@ -184,55 +196,26 @@ const ShopContextProvider = (props) => {
 
   const getTotalAmount = () => {
     if (buyNowItem) {
-      // Calculate total for buyNowItem
       const itemTotal = buyNowItem.price * buyNowItem.quantity;
       const discountAmount = ((buyNowItem.discount || 0) / 100) * itemTotal;
       const voucherAmount = voucherAmountDiscount.amount || 0;
-
-      // Calculate weight fee for buyNowItem
       const itemWeight = buyNowItem.weight || 0;
       const weightFee = itemWeight * feePerKilo * buyNowItem.quantity;
       const baseFee = regions[region] || 0;
       const shippingFee = baseFee + weightFee;
-
-      console.log("🛒 Buy Now Calculation:", {
-        itemTotal,
-        discountAmount,
-        voucherAmount,
-        itemWeight,
-        weightFee,
-        baseFee,
-        shippingFee,
-        finalTotal: itemTotal - discountAmount - voucherAmount + shippingFee,
-      });
-
       return itemTotal - discountAmount - voucherAmount + shippingFee;
     }
-
-    // Original cart calculation
-    const cartAmount = Number(getCartAmount()) || 0;
+    const cartAmount = Number(getCartAmount().amount) || 0;
     const discountAmount = Number(getDiscountAmount()) || 0;
     const voucherAmount = ((Number(voucherDiscount) || 0) / 100) * cartAmount;
     const voucherAmount1 = Number(voucherAmountDiscount.amount) || 0;
     const shippingFee = Number(delivery_fee) || 0;
-
-    // Calculate final total with all discounts
     const finalTotal =
       cartAmount -
       discountAmount -
       voucherAmount -
       voucherAmount1 +
       shippingFee;
-
-    console.log("🛒 Final Calculation:", {
-      cartAmount,
-      discountAmount,
-      voucherAmount,
-      voucherAmount1,
-      shippingFee,
-      finalTotal,
-    });
-
     return finalTotal;
   };
 
@@ -246,7 +229,7 @@ const ShopContextProvider = (props) => {
   }, [voucherAmountDiscount]);
 
   const getDiscountAmount = () => {
-    const cartAmount = getCartAmount();
+    const cartAmount = getCartAmount().amount;
     const discount = (cartAmount * discountPercent) / 100;
 
     console.log("🎟 Discount Applied:", discount);
@@ -322,13 +305,13 @@ const ShopContextProvider = (props) => {
 
   // Add product to cart
 // Improved addToCart function with better variation filtering
-const addToCart = async (itemId, quantity, variations = null) => {
+const addToCart = async (itemId, quantity, variations = null, finalPriceOverride = null) => {
   if (!token || !localStorage.getItem("userId")) {
     toast.error("You must be logged in to add items to your cart.");
     return;
   }
   
-  console.log("🧪 Adding to Cart:", { itemId, quantity, variations });
+  console.log("🧪 Adding to Cart:", { itemId, quantity, variations, finalPriceOverride });
   const itemInfo = products.find((product) => product._id === itemId);
 
   if (!itemInfo) {
@@ -422,7 +405,7 @@ const addToCart = async (itemId, quantity, variations = null) => {
         quantity: quantity,
         variations: selectedVariations,
         variationAdjustment,
-        finalPrice: itemInfo.price + variationAdjustment,
+        finalPrice: finalPriceOverride !== null ? finalPriceOverride : itemInfo.price + variationAdjustment,
         baseProductId: itemId // Keep reference to original product
       },
     };
@@ -465,7 +448,7 @@ const addToCart = async (itemId, quantity, variations = null) => {
           quantity: updatedCart[cartItemKey].quantity, // send the new total quantity
           variations: selectedVariations,
           variationAdjustment,
-          finalPrice: itemInfo.price + variationAdjustment,
+          finalPrice: finalPriceOverride !== null ? finalPriceOverride : itemInfo.price + variationAdjustment,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -722,26 +705,32 @@ const updateQuantity = async (itemId, newQuantity) => {
 
   // Fixed getCartAmount to return the totalWeight properly
   const getCartAmount = () => {
+    // If buyNowItem exists, calculate only for that item
+    if (buyNowItem) {
+      const quantity = buyNowItem.quantity || 0;
+      if (quantity <= 0) return { amount: 0, totalWeight: 0 };
+      let itemPrice = buyNowItem.price || 0;
+      if (buyNowItem.discount) {
+        itemPrice = itemPrice * (1 - buyNowItem.discount / 100);
+      }
+      let variationAdjustment = buyNowItem.variationAdjustment || 0;
+      const finalItemPrice = itemPrice + variationAdjustment;
+      const totalAmount = finalItemPrice * quantity;
+      const totalWeight = (buyNowItem.weight || 0) * quantity;
+      return { amount: totalAmount, totalWeight };
+    }
     let totalAmount = 0;
     let totalWeight = 0;
-
     Object.entries(cartItems).forEach(([itemId, itemData]) => {
       const quantity = itemData.quantity || 0;
       if (quantity <= 0) return;
-
       const baseProductId = itemId.split('-')[0];
       const itemInfo = productDict[baseProductId];
       if (!itemInfo) return;
-
-      // Base price
       let itemPrice = itemInfo.price || 0;
-
-      // Apply discount if exists
       if (itemInfo.discount) {
         itemPrice = itemPrice * (1 - itemInfo.discount / 100);
       }
-
-      // Add variation adjustments
       let variationAdjustment = 0;
       if (itemData.variations && typeof itemData.variations === "object") {
         variationAdjustment = Object.values(itemData.variations).reduce(
@@ -749,22 +738,17 @@ const updateQuantity = async (itemId, newQuantity) => {
           0
         );
       }
-
       const finalItemPrice = itemPrice + variationAdjustment;
       totalAmount += finalItemPrice * quantity;
       totalWeight += (itemInfo.weight || 0) * quantity;
-
       console.log(
         `🧮 Calculating ${itemInfo.name} x${quantity}:`,
         `Base: ₱${itemPrice}, +Variation: ₱${variationAdjustment}, Subtotal: ₱${finalItemPrice * quantity}`
       );
     });
-
-    // Update weight state
     setWeight(totalWeight);
     console.log("📦 Total Weight:", totalWeight);
     console.log("💰 Total Amount:", totalAmount);
-
     return { amount: totalAmount, totalWeight };
   };
 
@@ -897,6 +881,19 @@ const updateQuantity = async (itemId, newQuantity) => {
     fetchUserProfile();
   }, [token, backendUrl]);
 
+  // Helper to always get the numeric cart amount
+  const getCartAmountValue = () => getCartAmount().amount;
+
+  // Wrap setBuyNowItem to persist to localStorage
+  const setBuyNowItem = (item) => {
+    if (item) {
+      localStorage.setItem("buyNowItem", JSON.stringify(item));
+    } else {
+      localStorage.removeItem("buyNowItem");
+    }
+    setBuyNowItemState(item);
+  };
+
   // Context value
   const contextValue = {
     products,
@@ -927,7 +924,8 @@ const updateQuantity = async (itemId, newQuantity) => {
     removeFromCart,
     fetchProduct,
     setMemberCards,
-    getCartAmount: () => getCartAmount().amount, // For backward compatibility 
+    getCartAmount, // returns object
+    getCartAmountValue, // returns number
     memberCards,
     youtubeUrl,
     setYoutubeUrl,

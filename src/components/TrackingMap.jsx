@@ -205,6 +205,17 @@ const TrackingMap = ({ trackingInfo, isVisible }) => {
           )}
         </MapContainer>
       </motion.div>
+      {/* Delivered info message below the map */}
+      {trackingInfo.status === "delivered" && (
+        <div className="flex items-center justify-center mt-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-base font-medium">
+          <svg className="w-6 h-6 mr-2 text-green-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+          This parcel has been <span className="font-bold mx-1">delivered</span>.
+          {trackingInfo.origin_info?.trackinfo?.length > 0 && (
+            <span className="ml-2 text-green-800 text-sm">Delivered on: {new Date(trackingInfo.origin_info.trackinfo[trackingInfo.origin_info.trackinfo.length-1].checkpoint_date).toLocaleString()}</span>
+          )}
+          <span className="ml-2">Thank you for shopping with us!</span>
+        </div>
+      )}
     </AnimatePresence>
   );
 };

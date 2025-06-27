@@ -113,27 +113,42 @@ const Cart = () => {
     return cartData.some((item) => item.quantity > item.availableStock);
   }, [cartData, loading, isCartEmpty]);
 
+  const calculateCartItemTotal = (item) => {
+    const productData = item.productData;
+    if (!productData) return 0;
+
+    const capitalValue = productData.capital || 0;
+    let markup = 0;
+    if (productData.additionalCapital) {
+      if (productData.additionalCapital.type === 'percent') {
+        markup = capitalValue * (productData.additionalCapital.value / 100);
+      } else {
+        markup = productData.additionalCapital.value || 0;
+      }
+    }
+    const subtotalBase = capitalValue + markup;
+    const vatPercent = productData.vat || 0;
+    const vatAmount = subtotalBase * (vatPercent / 100);
+    const basePrice = subtotalBase + vatAmount;
+
+    let variationAdjustment = 0;
+    if (typeof item.variationAdjustment === 'number') {
+      variationAdjustment = item.variationAdjustment;
+    } else if (item.variations) {
+      variationAdjustment = Object.values(item.variations).reduce(
+        (sum, variation) => sum + (variation.priceAdjustment || 0),
+        0
+      );
+    }
+    const discountPercent = productData.discount || 0;
+    const itemPrice = (basePrice + variationAdjustment) * (1 - discountPercent / 100);
+    const itemTotal = Math.round((itemPrice * (item.quantity || 1)) * 100) / 100;
+    return itemTotal;
+  };
+
   const getTotalPrice = () => {
     return cartData.reduce((total, item) => {
-      const productData = item.productData;
-      if (!productData) return total;
-
-      // Calculate variation adjustment
-      let variationAdjustment = 0;
-      if (item.variations) {
-        variationAdjustment = Object.values(item.variations).reduce(
-          (sum, variation) => sum + (variation.priceAdjustment || 0),
-          0
-        );
-      }
-      // Calculate base price with variations
-      let basePrice = (productData.price || 0) + variationAdjustment;
-      // Apply discount
-      const discount = productData.discount ? (basePrice * (productData.discount / 100)) : 0;
-      // Round after discount
-      const finalPrice = Math.round((basePrice - discount) * 100) / 100;
-      const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
-      return Math.round((total + itemTotal) * 100) / 100;
+      return Math.round((total + calculateCartItemTotal(item)) * 100) / 100;
     }, 0);
   };
   
@@ -257,14 +272,46 @@ const handleQuantityChange = async (itemId, newQuantity) => {
             const productData = item.productData;
             if (!productData) return null;
 
+            // --- Begin CartTotal-like computation ---
+            const capitalValue = productData.capital || 0;
+            let markup = 0;
+            if (productData.additionalCapital) {
+              if (productData.additionalCapital.type === 'percent') {
+                markup = capitalValue * (productData.additionalCapital.value / 100);
+              } else {
+                markup = productData.additionalCapital.value || 0;
+              }
+            }
+            const subtotalBase = capitalValue + markup;
+            const vatPercent = productData.vat || 0;
+            const vatAmount = subtotalBase * (vatPercent / 100);
+            const basePrice = subtotalBase + vatAmount;
             let variationAdjustment = 0;
-            let maxStock = productData.quantity;
-            if (item.variations) {
+            if (typeof item.variationAdjustment === 'number') {
+              variationAdjustment = item.variationAdjustment;
+            } else if (item.variations) {
               variationAdjustment = Object.values(item.variations).reduce(
                 (sum, variation) => sum + (variation.priceAdjustment || 0),
                 0
               );
-              // Find the minimum stock among all selected variations
+            }
+            const discountPercent = productData.discount || 0;
+            const itemPrice = (basePrice + variationAdjustment) * (1 - discountPercent / 100);
+            const itemTotal = Math.round((itemPrice * (item.quantity || 1)) * 100) / 100;
+            // Debug log for each item
+            console.log('DEBUG CART ITEM:', {
+              name: productData.name,
+              basePrice,
+              variationAdjustment,
+              discount: discountPercent,
+              itemPrice,
+              quantity: item.quantity,
+              itemTotal,
+            });
+            // --- End CartTotal-like computation ---
+
+            let maxStock = productData.quantity;
+            if (item.variations) {
               const stocks = Object.entries(item.variations).map(
                 ([variationType, variationData]) => {
                   const variation = productData.variations?.find(
@@ -280,10 +327,6 @@ const handleQuantityChange = async (itemId, newQuantity) => {
                 maxStock = Math.min(...stocks);
               }
             }
-            let basePrice = (productData.price || 0) + variationAdjustment;
-            const discount = productData.discount ? (basePrice * (productData.discount / 100)) : 0;
-            const finalPrice = Math.round((basePrice - discount) * 100) / 100;
-            const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
 
             return (
               <div
@@ -303,16 +346,18 @@ const handleQuantityChange = async (itemId, newQuantity) => {
                     <p className="text-xs font-light text-gray-500 sm:text-sm">
                       {productData.description}
                     </p>
+                    {/* Simplified price breakdown: only final price and variation adjustment */}
+                   
                     <div className="flex items-center gap-5 mt-2">
                       {productData.discount > 0 && (
                         <p className="text-gray-500 line-through">
                           {currency}
-                          {productData.price.toLocaleString()}
+                          {basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                         </p>
                       )}
                       <p className="text-lg font-semibold">
                         {currency}
-                        {finalPrice.toLocaleString()}
+                        {itemPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </p>
                     </div>
 
@@ -321,7 +366,6 @@ const handleQuantityChange = async (itemId, newQuantity) => {
                         {Object.entries(item.variations).map(
                           ([variationType, variationData]) => {
                             if (variationData && variationData.name) {
-                              // Only show the selected variation
                               const variation = productData.variations?.find(
                                 (v) => v.name === variationType
                               );
@@ -345,7 +389,7 @@ const handleQuantityChange = async (itemId, newQuantity) => {
                                           (
                                           {variationData.priceAdjustment > 0 ? "+" : "-"}
                                           {currency}
-                                          {Math.abs(variationData.priceAdjustment).toLocaleString()}
+                                          {Math.abs(variationData.priceAdjustment).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                                           )
                                         </span>
                                       ) : null}

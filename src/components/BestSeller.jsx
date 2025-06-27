@@ -63,7 +63,7 @@ const BestSeller = () => {
         <div className="my-[10%] md:px-[7vw] px-4 md:mx-[6%]">
             <div className="py-8 text-3xl text-center">
                 <Title text1={"BEST"} text2={"SELLERS"} />
-                <p className="text-lg text-gray-600">"Don’t miss out on our best-selling products — loved by hundreds of happy customers! These top-rated items are flying off the shelves fast, so grab yours while stocks last and see why everyone’s talking about them!"</p>
+                <p className="text-lg text-gray-600">"Don't miss out on our best-selling products — loved by hundreds of happy customers! These top-rated items are flying off the shelves fast, so grab yours while stocks last and see why everyone's talking about them!"</p>
             </div>
             <div className="grid grid-cols-2 sm:gap-[2%] md:gap-x-[7%] sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-4 gap-y-6">
                 {bestSeller.map((item) => (
@@ -78,6 +78,10 @@ const BestSeller = () => {
                             discount={item.data.discount}
                             currency={currency}
                             description={item.data.description}
+                            variations={item.data.variations}
+                            capital={item.data.capital}
+                            additionalCapital={item.data.additionalCapital}
+                            vat={item.data.vat}
                         />
                     ) : (
                         <AdCard

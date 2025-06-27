@@ -8,6 +8,36 @@ import { toast } from "react-toastify";
 import { useSocket } from '../context/SocketContext';
 
 const PlaceOrder = () => {
+  const {
+    navigate,
+    backendUrl,
+    token,
+    cartItems,
+    setCartItems,
+    getCartAmountValue,
+    getTotalAmount,
+    products,
+    delivery_fee,
+    discountPercent,
+    voucherAmountDiscount,
+    setRegion,
+    buyNowItem,
+    setBuyNowItem,
+    getDiscountAmount,
+    setVoucherAmountDiscount,
+  } = useContext(ShopContext);
+
+  const socket = useSocket();
+
+  // Early returns BEFORE any other hooks
+  if (!products || products.length === 0) {
+    return <div className="text-center py-20 text-lg font-semibold">Loading products... Please wait.</div>;
+  }
+  // Only show cart empty message if neither buyNowItem nor cart items exist
+  if (!buyNowItem && (!cartItems || Object.keys(cartItems).length === 0)) {
+    return <div className="text-center py-20 text-lg font-semibold">Your cart is empty. Please add items before placing an order.</div>;
+  }
+
   const [method, setMethod] = useState("cod");
   const [loading, setLoading] = useState(false);
   const [voucherCode, setVoucherCode] = useState("");
@@ -17,23 +47,10 @@ const PlaceOrder = () => {
   const [receiptFile, setReceiptFile] = useState(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [orderId, setOrderId] = useState(null);
-  const socket = useSocket();
-  const {
-    navigate,
-    backendUrl,
-    token,
-    cartItems,
-    setCartItems,
-    getCartAmount,
-    getTotalAmount,
-    products,
-    delivery_fee,
-    discountPercent,
-    voucherAmountDiscount,
-    setRegion,
-    buyNowItem,
-    setBuyNowItem,
-  } = useContext(ShopContext);
+
+  // Debug: Log cartItems and products
+  console.log('DEBUG: cartItems in PlaceOrder', cartItems);
+  console.log('DEBUG: products in PlaceOrder', products);
 
   console.log("Voucher Amount 1:", voucherAmountDiscount); 
   console.log("Discount percent:", discountPercent);
@@ -93,12 +110,39 @@ const PlaceOrder = () => {
   });
 
   const orderItems = buyNowItem
-    ? [buyNowItem]
+    ? [{
+        ...buyNowItem,
+        price: buyNowItem.price,
+        variationAdjustment: buyNowItem.variationDetails && Array.isArray(buyNowItem.variationDetails)
+          ? buyNowItem.variationDetails.reduce((sum, v) => sum + (v.priceAdjustment || 0), 0)
+          : 0,
+        quantity: buyNowItem.quantity,
+        variationDetails: buyNowItem.variationDetails || []
+      }]
     : Object.keys(cartItems)
         .filter((itemId) => cartItems[itemId]?.quantity > 0)
         .map((itemId) => {
-          const itemInfo = products.find((product) => product._id === itemId);
-          return itemInfo ? { ...itemInfo, quantity: cartItems[itemId].quantity } : null;
+          const baseProductId = itemId.split('-')[0];
+          const itemInfo = products.find((product) => product._id === baseProductId);
+          if (!itemInfo) return null;
+          const cartItem = cartItems[itemId];
+          const selectedVariations = cartItem.variations || {};
+          const variationAdjustment = Object.values(selectedVariations).reduce(
+            (sum, v) => sum + (v.priceAdjustment || 0),
+            0
+          );
+          return {
+            ...itemInfo,
+            _id: itemInfo._id,
+            price: itemInfo.price,
+            variationAdjustment,
+            quantity: cartItem.quantity,
+            variationDetails: Object.entries(selectedVariations).map(([variationName, option]) => ({
+              variationName,
+              optionName: option.name,
+              priceAdjustment: option.priceAdjustment || 0
+            }))
+          };
         })
         .filter(Boolean);
 
@@ -156,38 +200,50 @@ const PlaceOrder = () => {
   
   // In PlaceOrder.jsx, update the computedTotal calculation
 const computedTotal = useMemo(() => {
+  let subtotal = 0;
   if (buyNowItem) {
-    console.log("🛒 Buy Now Item Details:", {
-      basePrice: buyNowItem.originalPrice,
-      variation: buyNowItem.variationAdjustment,
-      quantity: buyNowItem.quantity,
-      discount: buyNowItem.discount || 0,
-      feePerKilo: buyNowItem.feePerKilo,
-    });
-    console.log("🛒 Buy Now Item:", buyNowItem);
-    const basePrice = buyNowItem.finalPrice;
-
-    const discountedPrice = basePrice - (basePrice * (buyNowItem.discount || 0)) / 100;
-    const totalAmount = discountedPrice * buyNowItem.quantity;
-    
-    console.log("💰 Base Price with Variations:", basePrice);
-    console.log("💸 Discounted Price:", discountedPrice);
-    console.log("📦 Quantity:", buyNowItem.quantity);
-    console.log("🚚 Delivery Fee:", delivery_fee);
-    
-    return totalAmount + delivery_fee;
+    let basePrice = buyNowItem.price || 0;
+    let discountAmount = buyNowItem.discount ? (basePrice * (buyNowItem.discount / 100)) : 0;
+    let variationAdjustment = buyNowItem.variationAdjustment || 0;
+    let finalPrice = Math.round(((basePrice - discountAmount) + variationAdjustment) * 100) / 100;
+    subtotal = Math.round((finalPrice * (buyNowItem.quantity || 1)) * 100) / 100;
+    // Debug log for buyNowItem
+    console.log('PLACEORDER BUY NOW DEBUG:', { basePrice, discount: buyNowItem.discount, discountAmount, variationAdjustment, finalPrice, quantity: buyNowItem.quantity, subtotal });
+  } else {
+    subtotal = Object.keys(cartItems)
+      .filter((itemId) => cartItems[itemId]?.quantity > 0)
+      .reduce((sum, itemId) => {
+        const itemInfo = products.find((product) => product._id === itemId);
+        if (!itemInfo) return sum;
+        let basePrice = itemInfo.price || 0;
+        let discountAmount = itemInfo.discount ? (basePrice * (itemInfo.discount / 100)) : 0;
+        let cartItem = cartItems[itemId];
+        let selectedVariations = cartItem.variations || {};
+        let variationAdjustment = Object.values(selectedVariations).reduce(
+          (s, v) => s + (v.priceAdjustment || 0),
+          0
+        );
+        let finalPrice = Math.round(((basePrice - discountAmount) + variationAdjustment) * 100) / 100;
+        let itemTotal = Math.round((finalPrice * (cartItem.quantity || 1)) * 100) / 100;
+        // Debug log for each cart item
+        console.log('PLACEORDER CART ITEM DEBUG:', { name: itemInfo.name, basePrice, discount: itemInfo.discount, discountAmount, variationAdjustment, finalPrice, quantity: cartItem.quantity, itemTotal });
+        return Math.round((sum + itemTotal) * 100) / 100;
+      }, 0);
   }
-
-  const cartAmount = getCartAmount();
-  const discountAmount = (cartAmount * discountPercent) / 100;
-  const discountedCartAmount = cartAmount - discountAmount;
-  const finalAmount = discountedCartAmount + delivery_fee - (voucherAmountDiscount?.amount || 0);
-
-  console.log("🛍️ Cart Amount:", cartAmount);
-  console.log("🎟️ Discount:", discountPercent);
-  console.log("🏁 Final Amount (Cart):", finalAmount);
-  return finalAmount;
-}, [buyNowItem, discountPercent, delivery_fee, cartItems, voucherAmountDiscount]);
+  const discount = discountAmount || 0;
+  const voucher = voucherAmountDiscount?.amount || 0;
+  const shipping = delivery_fee || 0;
+  const total = Math.round((subtotal - discount - voucher + shipping) * 100) / 100;
+  // Debug logs for calculation
+  console.log('==== FRONTEND ORDER DEBUG (STANDARDIZED) ====');
+  console.log('Subtotal:', subtotal);
+  console.log('Discount:', discount);
+  console.log('Voucher:', voucher);
+  console.log('Shipping Fee:', shipping);
+  console.log('Final Calculated Total:', total);
+  console.log('=============================================');
+  return total;
+}, [buyNowItem, cartItems, products, discountAmount, voucherAmountDiscount, delivery_fee]);
   
   useEffect(() => {
     return () => {
@@ -209,7 +265,7 @@ const computedTotal = useMemo(() => {
         if (data.success && data.discountPercent !== undefined) {
           const discountValue = parseFloat(data.discountPercent);
           if (!isNaN(discountValue)) {
-            setDiscountAmount((getCartAmount() * discountValue) / 100);
+            setDiscountAmount((getCartAmountValue() * discountValue) / 100);
             setVoucherCode(voucherCode);
             toast.success(`Discount applied! ${discountValue}% off`);
           }
@@ -238,187 +294,183 @@ const computedTotal = useMemo(() => {
     }
   };
 
-  const onSubmitHandler = async (event) => {
-    event.preventDefault();
-    
-    if (method === "receipt" && !receiptFile) {
-      toast.error("Please upload your payment receipt");
-      return;
-    }
-
-    setLoading(true);
+// In PlaceOrder.jsx - update the onSubmitHandler function
+const onSubmitHandler = async (event) => {
+  event.preventDefault();
   
-    if (!userId) {
-      toast.error("User ID is required.");
+  if (method === "receipt" && !receiptFile) {
+    toast.error("Please upload your payment receipt");
+    return;
+  }
+
+  // === NEW VALIDATION: Prevent unmatched cart items ===
+  const unmatchedItems = Object.keys(cartItems)
+    .filter((itemId) => cartItems[itemId]?.quantity > 0)
+    .filter((itemId) => {
+      const baseProductId = itemId.split('-')[0];
+      return !products.find((product) => product._id === baseProductId);
+    });
+  if (unmatchedItems.length > 0) {
+    toast.error("Some cart items could not be matched to products. Please refresh the page or try again later.");
+    console.error("Unmatched cart items:", unmatchedItems);
+    return;
+  }
+
+  // === NEW VALIDATION: Prevent zero/missing price items ===
+  const invalidItems = orderItems.filter(
+    (item) => !item.price || item.price <= 0 || isNaN(item.price)
+  );
+  if (invalidItems.length > 0) {
+    toast.error(
+      `Cannot place order: One or more items have zero or missing price. Please remove these items from your cart and try again.`
+    );
+    console.error("Invalid cart items detected:", invalidItems);
+    return;
+  }
+
+  setLoading(true);
+
+  if (!userId) {
+    toast.error("User ID is required.");
+    setLoading(false);
+    return;
+  }
+
+  try {
+    // --- Use context for all calculations ---
+    const subtotal = getCartAmountValue();
+    if (!subtotal || subtotal === 0) {
+      toast.error("Your cart subtotal is zero. Please add items to your cart before placing an order.");
       setLoading(false);
       return;
     }
-  
-    try {
-      if (computedTotal <= 0) {
-        toast.error("Order total must be greater than zero.");
-        setLoading(false);
-        return;
-      }
-      console.log('[DEBUG] PlaceOrder - computedTotal (total amount to backend):', computedTotal);
-
-      const orderItems = buyNowItem
-  ? [buyNowItem]
-  : Object.keys(cartItems)
-      .filter((itemId) => cartItems[itemId]?.quantity > 0)
-      .map(itemId => {
-        const baseProductId = itemId.split('-')[0];
-        const product = products.find(p => p._id === baseProductId);
-        if (!product) return null;
-
-        const cartItem = cartItems[itemId];
-        const selectedVariations = cartItem.variations || {};
-
-        return {
-          ...product,
-          productId: baseProductId,
-          quantity: cartItem.quantity,
-          variationDetails: Object.entries(selectedVariations).map(([variationName, option]) => ({
-            variationName,
-            optionName: option.name,
-            priceAdjustment: option.priceAdjustment || 0
-          }))
-        };
-      })
-      .filter(Boolean);
-  
-      if (!products.length) {
-        toast.error("Products not loaded. Try again.");
-        console.error("❌ Products are empty:", products);
-        return;
-      }
+    const discount = getDiscountAmount();
+    const shipping = delivery_fee || 0;
+    const originalVoucher = voucherAmountDiscount?.amount || 0;
     
-  
-      const orderData = {
-        address: formData,
-        items: buyNowItem 
-    ? [{
-        ...buyNowItem,
-        productId: buyNowItem._id,
-        name: buyNowItem.name,
-        price: buyNowItem.price,
-        quantity: buyNowItem.quantity,
-        variationDetails: buyNowItem.variations 
-          ? Object.entries(buyNowItem.variations).map(([variationName, option]) => ({
-              variationName,
-              optionName: option.name,
-              priceAdjustment: option.priceAdjustment || 0
-            }))
-          : []
-      }]
-      : orderItems,
-        amount: Math.round(computedTotal * 100) / 100,
-        discountAmount,
-        voucherCode: voucherAmountDiscount?.code,
-        voucherAmount: voucherAmountDiscount?.amount || 0,
-        shippingFee: delivery_fee,
-        region: formData.region,
-        userId,
-        paymentMethod: method,
-        variationAdjustment: buyNowItem?.variationAdjustment || 0,
-      };
-      
-      // Debug logs for order calculation
-      const itemSubtotal = buyNowItem
-        ? buyNowItem.price * buyNowItem.quantity
-        : getCartAmount();
-      const discountPercentLog = discountPercent;
-      const discountAmountLog = (itemSubtotal * discountPercentLog) / 100;
-      const voucherAmountLog = voucherAmountDiscount?.amount || 0;
-      const finalItemTotal = itemSubtotal - discountAmountLog - voucherAmountLog;
-      console.log('==== ORDER DEBUG ====');
-      console.log('Item Subtotal:', itemSubtotal);
-      console.log('Discount Percent:', discountPercentLog);
-      console.log('Discount Amount:', discountAmountLog);
-      console.log('Voucher Amount:', voucherAmountLog);
-      console.log('Final Item Total (before shipping):', finalItemTotal);
-      console.log('Shipping Fee:', delivery_fee);
-      console.log('Amount sent to backend (should be finalItemTotal):', orderData.amount);
-      console.log('ShippingFee sent to backend:', orderData.shippingFee);
-      console.log('====================');
+    // NEW: Calculate maximum allowed voucher amount
+    const maxVoucher = Math.max(0, subtotal - discount + shipping);
+    let appliedVoucher = originalVoucher;
+    if (appliedVoucher > maxVoucher) {
+      appliedVoucher = maxVoucher;
+      toast.warn("Voucher amount was reduced to avoid zero or negative order total.");
+    }
+    
+    // Get the final total directly from context (CartTotal)
+    const finalTotal = Math.max(0, subtotal - discount - appliedVoucher + shipping);
 
-      let response;
+    // --- Debug logs ---
+    console.log('==== DEBUG ORDER SUBMISSION (CONTEXT) ====');
+    console.log('Subtotal (context):', subtotal);
+    console.log('Discount (context):', discount);
+    console.log('Voucher (original):', originalVoucher);
+    console.log('Voucher (applied/capped):', appliedVoucher);
+    console.log('Shipping (context):', shipping);
+    console.log('Final Total (from CartTotal/context):', finalTotal);
+    console.log('Order Items:', orderItems);
 
-      if (method === "receipt") {
-        setIsUploadingReceipt(true);
-        const formData = new FormData();
-        formData.append("receipt", receiptFile);
-        // Stringify the orderData to match backend expectation
-        formData.append("orderData", JSON.stringify({
-          ...orderData,
-          paymentMethod: "receipt_upload" // Match backend expectation
-        }));
-      
-        response = await axios.post(`${backendUrl}/api/order/upload-receipt`, formData, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "multipart/form-data"
+    if (finalTotal <= 0) {
+      toast.error("Order total must be greater than zero after applying all discounts and vouchers.");
+      setLoading(false);
+      return;
+    }
+
+    // Prepare orderData
+    const orderData = {
+      address: formData,
+      items: orderItems,
+      amount: Math.round(finalTotal * 100) / 100,
+      discountAmount: discount,
+      voucherCode: voucherAmountDiscount?.code,
+      voucherAmount: appliedVoucher,
+      shippingFee: shipping,
+      region: formData.region,
+      userId,
+      paymentMethod: method,
+      variationAdjustment: buyNowItem?.variationAdjustment || 0,
+      ...(buyNowItem ? { fromCart: false } : {})
+    };
+
+    console.log('OrderData sent to backend:', orderData);
+    console.log('===============================');
+
+    let response;
+
+    if (method === "receipt") {
+      setIsUploadingReceipt(true);
+      const formData = new FormData();
+      formData.append("receipt", receiptFile);
+      formData.append("orderData", JSON.stringify({
+        ...orderData,
+        paymentMethod: "receipt_upload"
+      }));
+    
+      response = await axios.post(`${backendUrl}/api/order/upload-receipt`, formData, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "multipart/form-data"
+        }
+      });
+    } else {
+      // Handle other payment methods
+      switch (method) {
+        case "cod":
+          response = await axios.post(`${backendUrl}/api/order/place`, orderData, { headers: { token } });
+          break;
+        case "stripe":
+          const { data } = await axios.post(`${backendUrl}/api/order/stripe`, orderData, { headers: { token } });
+          if (data.session_url) {
+            window.location.href = data.session_url;
+            return;
+          } else {
+            toast.error("Failed to retrieve Stripe payment link.");
+            return;
           }
-        });
-      } else {
-        // Handle other payment methods
-        switch (method) {
-          case "cod":
-            response = await axios.post(`${backendUrl}/api/order/place`, orderData, { headers: { token } });
-            break;
-          case "stripe":
-            const { data } = await axios.post(`${backendUrl}/api/order/stripe`, orderData, { headers: { token } });
-            if (data.session_url) {
-              window.location.href = data.session_url;
-              return;
-            } else {
-              toast.error("Failed to retrieve Stripe payment link.");
-              return;
-            }
-          case "gcash":
-            const gcashRes = await axios.post(`${backendUrl}/api/payment/gcash`, orderData, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (gcashRes.data?.paymentUrl) {
-              localStorage.setItem("pendingOrderId", gcashRes.data.orderId);
-              window.location.href = gcashRes.data.paymentUrl;
-              toast.info("Redirecting to GCash for payment...");
-              return;
-            } else {
-              toast.error("Failed to retrieve GCash payment link.");
-              return;
-            }
-          default:
-            break;
-        }
+        case "gcash":
+          const gcashRes = await axios.post(`${backendUrl}/api/payment/gcash`, orderData, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (gcashRes.data?.paymentUrl) {
+            localStorage.setItem("pendingOrderId", gcashRes.data.orderId);
+            window.location.href = gcashRes.data.paymentUrl;
+            toast.info("Redirecting to GCash for payment...");
+            return;
+          } else {
+            toast.error("Failed to retrieve GCash payment link.");
+            return;
+          }
+        default:
+          break;
       }
-  
-      if (response?.data?.success) {
-        setOrderId(response.data.orderId || response.data.order._id);
-        
-        // Only clear cart if it's not a Buy Now order
-        if (!buyNowItem) {
-          setCartItems({});
-        }
-        
-        setBuyNowItem(null);
-        
-        // Wait a moment before navigating to ensure state updates
+    }
+
+    if (response?.data?.success) {
+      setOrderId(response.data.orderId || response.data.order._id);
+      setVoucherAmountDiscount({ code: "", amount: 0, minimumPurchase: 0 });
+      // Only clear cart if it's not a Buy Now order
+      if (!buyNowItem) {
+        setCartItems({});
+      }
+      setBuyNowItem(null);
+      localStorage.removeItem("buyNowItem");
+      // Only redirect for COD or receipt upload
+      if (method === "cod" || method === "receipt") {
         setTimeout(() => {
           toast.success("✅ Order placed successfully!");
-          navigate("/orders");
+          navigate("/orders", { state: { justOrdered: true } });
           socket.emit('joinOrderRoom', response.data.orderId || response.data.order._id);
         }, 100);
-      } else {
-        toast.error(response?.data?.message || "Order placed but with unexpected response");
       }
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "An unexpected error occurred.");
-    } finally {
-      setLoading(false);
-      setIsUploadingReceipt(false);
+    } else {
+      toast.error(response?.data?.message || "Order placed but with unexpected response");
     }
-  };
+  } catch (error) {
+    toast.error(error?.response?.data?.message || "An unexpected error occurred.");
+  } finally {
+    setLoading(false);
+    setIsUploadingReceipt(false);
+  }
+};
   
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -562,7 +614,7 @@ const computedTotal = useMemo(() => {
       </div>
 
       <div className="pt-[40px]">
-        <CartTotal additionalFee={delivery_fee} discount={discountAmount} total={computedTotal} />
+        <CartTotal items={orderItems} />
 
         <Title text1={"PAYMENT"} text2={"METHOD"} />
         <div className="flex flex-col gap-3 lg:flex-row">

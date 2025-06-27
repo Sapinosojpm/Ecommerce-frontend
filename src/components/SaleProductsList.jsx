@@ -10,23 +10,39 @@ import Title from "./Title";
 import { ShopContext } from "../context/ShopContext";
 import { assets } from "../assets/assets";
 
-// Utility function to calculate discounted price
-const calculateDiscountedPrice = (price, discount) => {
-  return (price * (1 - discount / 100)).toFixed(2);
+// Utility function to calculate base price and first variation adjustment
+const getBaseAndVariation = (product) => {
+  const capital = product.capital || 0;
+  let markup = 0;
+  if (product.additionalCapital) {
+    if (product.additionalCapital.type === 'percent') {
+      markup = capital * (product.additionalCapital.value / 100);
+    } else {
+      markup = product.additionalCapital.value || 0;
+    }
+  }
+  const subtotal = capital + markup;
+  const vatPercent = product.vat || 0;
+  const vatAmount = subtotal * (vatPercent / 100);
+  const basePrice = subtotal + vatAmount;
+  let firstVariationAdjustment = 0;
+  if (product.variations && product.variations.length > 0) {
+    const firstVar = product.variations[0];
+    if (firstVar && firstVar.options && firstVar.options.length > 0) {
+      const firstOpt = firstVar.options[0];
+      firstVariationAdjustment = firstOpt.priceAdjustment || 0;
+    }
+  }
+  return { basePrice, firstVariationAdjustment };
 };
 
 // Memoized product card component for better performance
 const SaleProductCard = React.memo(({ product }) => {
-  const discountedPrice = useMemo(
-    () => calculateDiscountedPrice(product.price, product.discount),
-    [product.price, product.discount]
-  );
-
-  const imageUrl = useMemo(
-    () => Array.isArray(product.image) ? product.image[0] : product.image,
-    [product.image]
-  );
-
+  const { basePrice, firstVariationAdjustment } = getBaseAndVariation(product);
+  const discount = product.discount || 0;
+  const discountedPrice = (basePrice * (1 - discount / 100)) + firstVariationAdjustment;
+  const priceWithVariation = basePrice + firstVariationAdjustment;
+  const imageUrl = Array.isArray(product.image) ? product.image[0] : product.image;
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -38,10 +54,10 @@ const SaleProductCard = React.memo(({ product }) => {
       onMouseLeave={() => setHovered(false)}
     >
       {/* Sale Badge */}
-      {product.discount > 0 && (
+      {discount > 0 && (
         <div className="absolute z-20 top-4 left-4">
           <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1.5 rounded-full text-xs font-bold shadow-lg backdrop-blur-sm">
-            -{product.discount}% OFF
+            -{discount}% OFF
           </div>
         </div>
       )}
@@ -71,12 +87,20 @@ const SaleProductCard = React.memo(({ product }) => {
         {/* Price Section */}
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center space-x-2">
-            <span className="text-xl font-bold text-[#088395]">
-              ₱{discountedPrice}
-            </span>
-            <span className="text-sm font-medium text-gray-400 line-through">
-              ₱{product.price.toFixed(2)}
-            </span>
+            {discount > 0 ? (
+              <>
+                <span className="text-xl font-bold text-[#088395]">
+                  ₱{discountedPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </span>
+                <span className="text-sm font-medium text-gray-400 line-through">
+                  ₱{basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </span>
+              </>
+            ) : (
+              <span className="text-xl font-bold text-gray-900">
+                ₱{priceWithVariation.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+              </span>
+            )}
           </div>
         </div>
       </div>

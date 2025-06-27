@@ -1,14 +1,17 @@
 import React, { useContext, useEffect, useState } from "react";
 import { ShopContext } from "../context/ShopContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { FiTruck, FiMapPin, FiPlus, FiX, FiRefreshCw } from 'react-icons/fi';
 import TrackingMap from '../components/TrackingMap';
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL; // for Vite projects
+const token = localStorage.getItem('token');
+
 const Orders = () => {
   // ===== Context & State =====
-  const { backendUrl, token, currency } = useContext(ShopContext);
+  const { currency, setCartItems, setVoucherAmountDiscount } = useContext(ShopContext);
   const [orders, setOrders] = useState([]); // Renamed for clarity
   const [activeTab, setActiveTab] = useState("all");
   const [loadingTrackingId, setLoadingTrackingId] = useState(null);
@@ -17,6 +20,9 @@ const Orders = () => {
   const [isRefreshingTracking, setIsRefreshingTracking] = useState(false);
   const [trackingError, setTrackingError] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  
 
   // ===================== Data Fetching =====================
   // Fetch user orders from backend
@@ -150,8 +156,19 @@ const Orders = () => {
 
   // ===================== Effects =====================
   useEffect(() => {
+    console.log('Orders component mounted');
     loadOrderData();
   }, [token]);
+
+  // Auto-refresh cart and voucher state if redirected from PlaceOrder
+  useEffect(() => {
+    if (location.state && location.state.justOrdered) {
+      setCartItems({});
+      setVoucherAmountDiscount({ code: "", amount: 0, minimumPurchase: 0 });
+      // Optionally, you can reload orders here if needed
+      loadOrderData();
+    }
+  }, [location.state, setCartItems, setVoucherAmountDiscount]);
 
   // ===================== UI Tabs =====================
   const tabs = [
@@ -260,7 +277,9 @@ const Orders = () => {
                           <th className="px-2 py-1 text-left">Product</th>
                           <th className="px-2 py-1 text-left">Variation(s)</th>
                           <th className="px-2 py-1 text-right">Base Price</th>
+                          <th className="px-2 py-1 text-right">VAT</th>
                           <th className="px-2 py-1 text-right">Variation Adj.</th>
+                          <th className="px-2 py-1 text-right">Subtotal</th>
                           <th className="px-2 py-1 text-right">Discount</th>
                           <th className="px-2 py-1 text-right">Final Price</th>
                           <th className="px-2 py-1 text-right">Qty</th>
@@ -269,17 +288,54 @@ const Orders = () => {
                       </thead>
                       <tbody>
                         {order.items.map((item, index) => {
-                          let variationAdjustment = 0;
-                          if (item.variationDetails && Array.isArray(item.variationDetails)) {
-                            variationAdjustment = item.variationDetails.reduce(
-                              (sum, v) => sum + (v.priceAdjustment || 0),
-                              0
-                            );
+                          // Robustly get variation details
+                          let variationDetails = Array.isArray(item.variationDetails)
+                            ? item.variationDetails
+                            : (item.variations && typeof item.variations === 'object'
+                                ? Object.entries(item.variations).map(([variationName, v]) => ({
+                                    variationName,
+                                    optionName: v.name,
+                                    priceAdjustment: v.priceAdjustment || 0,
+                                  }))
+                                : []);
+                          const capitalValue = item.capital || 0;
+                          let markup = 0;
+                          if (item.additionalCapital) {
+                            if (item.additionalCapital.type === 'percent') {
+                              markup = capitalValue * (item.additionalCapital.value / 100);
+                            } else {
+                              markup = item.additionalCapital.value || 0;
+                            }
                           }
-                          let basePrice = (item.price || 0) + variationAdjustment;
-                          const discount = item.discount ? (basePrice * (item.discount / 100)) : 0;
-                          const finalPrice = Math.round((basePrice - discount) * 100) / 100;
-                          const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
+                          const subtotal = capitalValue + markup;
+                          const vatPercent = item.vat || 0;
+                          const vatAmount = subtotal * (vatPercent / 100);
+                          const basePrice = subtotal + vatAmount;
+                          const variationAdjustment = item.variationAdjustment || 0;
+                          const discountPercent = item.discount || 0;
+                          // New logic: discounted price = (basePrice * (1 - discount%)) + variationAdjustment
+                          const discountedPrice = (basePrice * (1 - discountPercent / 100)) + variationAdjustment;
+                          const priceWithVariation = basePrice + variationAdjustment;
+                          const finalPrice = discountPercent > 0 ? discountedPrice : priceWithVariation;
+                          const discountAmount = discountPercent > 0 ? (basePrice * (discountPercent / 100)) : 0;
+                          const quantity = item.quantity || 1;
+                          const itemTotal = Math.round((finalPrice * quantity) * 100) / 100;
+                          // Debug logs for each item
+                          console.log('ORDER ITEM DEBUG:', {
+                            name: item.name,
+                            capitalValue,
+                            markup,
+                            subtotal,
+                            vatPercent,
+                            vatAmount,
+                            basePrice,
+                            variationAdjustment,
+                            discountPercent,
+                            discountAmount,
+                            finalPrice,
+                            quantity,
+                            itemTotal
+                          });
                           return (
                             <tr key={index} className="border-t border-gray-200">
                               <td className="px-2 py-1">
@@ -291,8 +347,8 @@ const Orders = () => {
                               </td>
                               <td className="px-2 py-1 font-medium text-gray-800">{item.name}</td>
                               <td className="px-2 py-1 text-green-700">
-                                {item.variationDetails?.length > 0 ? (
-                                  item.variationDetails.map((v, idx) => (
+                                {variationDetails.length > 0 ? (
+                                  variationDetails.map((v, idx) => (
                                     <div key={idx}>
                                       <span className="font-semibold">{v.variationName}</span>: {v.optionName}
                                     </div>
@@ -301,11 +357,13 @@ const Orders = () => {
                                   <span className="italic text-gray-400">None</span>
                                 )}
                               </td>
-                              <td className="px-2 py-1 text-right">{formatPrice(item.price || 0)}</td>
+                              <td className="px-2 py-1 text-right">{formatPrice(subtotal)}</td>
+                              <td className="px-2 py-1 text-right">{formatPrice(vatAmount)}</td>
                               <td className="px-2 py-1 text-right">{formatPrice(variationAdjustment)}</td>
-                              <td className="px-2 py-1 text-right text-red-600">-{formatPrice(discount)}</td>
+                              <td className="px-2 py-1 text-right">{formatPrice(basePrice)}</td>
+                              <td className="px-2 py-1 text-right text-red-600">-{formatPrice(discountAmount)}</td>
                               <td className="px-2 py-1 text-right text-blue-900 font-semibold">{formatPrice(finalPrice)}</td>
-                              <td className="px-2 py-1 text-right">{item.quantity}</td>
+                              <td className="px-2 py-1 text-right">{quantity}</td>
                               <td className="px-2 py-1 text-right font-bold text-green-700">{formatPrice(itemTotal)}</td>
                             </tr>
                           );
@@ -321,36 +379,50 @@ const Orders = () => {
                     <div className="mb-2 text-base font-semibold text-blue-700">Order Summary</div>
                     {(() => {
                       const subtotal = order.items.reduce((sum, item) => {
-                        let variationAdjustment = 0;
-                        if (item.variationDetails && Array.isArray(item.variationDetails)) {
-                          variationAdjustment = item.variationDetails.reduce(
-                            (s, v) => s + (v.priceAdjustment || 0),
-                            0
-                          );
+                        const capitalValue = item.capital || 0;
+                        let markup = 0;
+                        if (item.additionalCapital) {
+                          if (item.additionalCapital.type === 'percent') {
+                            markup = capitalValue * (item.additionalCapital.value / 100);
+                          } else {
+                            markup = item.additionalCapital.value || 0;
+                          }
                         }
-                        let basePrice = (item.price || 0) + variationAdjustment;
-                        const discount = item.discount ? (basePrice * (item.discount / 100)) : 0;
-                        const finalPrice = Math.round((basePrice - discount) * 100) / 100;
-                        const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
+                        const subtotalBase = capitalValue + markup;
+                        const vatPercent = item.vat || 0;
+                        const vatAmount = subtotalBase * (vatPercent / 100);
+                        const basePrice = subtotalBase + vatAmount;
+                        const variationAdjustment = item.variationAdjustment || 0;
+                        const discountPercent = item.discount || 0;
+                        const discountedPrice = (basePrice * (1 - discountPercent / 100)) + variationAdjustment;
+                        const priceWithVariation = basePrice + variationAdjustment;
+                        const finalPrice = discountPercent > 0 ? discountedPrice : priceWithVariation;
+                        const quantity = item.quantity || 1;
+                        const itemTotal = Math.round((finalPrice * quantity) * 100) / 100;
                         return Math.round((sum + itemTotal) * 100) / 100;
                       }, 0);
-                      const total = Math.round((subtotal + (order.shippingFee || 0)) * 100) / 100;
+                      const discount = order.discountAmount || 0;
+                      const voucher = order.voucherAmount || 0;
+                      const shipping = order.shippingFee || 0;
+                      const total = Math.round((subtotal - discount - voucher + shipping) * 100) / 100;
+                      // Debug logs for summary
+                      console.log('ORDER SUMMARY DEBUG:', { subtotal, discount, voucher, shipping, total });
                       return (
                         <div className="flex flex-col gap-1 text-sm text-gray-700">
                           <div className="flex justify-between">
                             <span>Subtotal:</span>
                             <span className="font-semibold">{formatPrice(subtotal)}</span>
                           </div>
-                          {order.voucherAmount > 0 && order.discountAmount === 0 && (
+                          {discount > 0 && (
                             <div className="flex justify-between">
                               <span>Discount:</span>
-                              <span className="text-red-600">-{formatPrice(order.voucherAmount)}</span>
+                              <span className="text-red-600">-{formatPrice(discount)}</span>
                             </div>
                           )}
-                          {order.discountAmount > 0 && order.voucherAmount === 0 && (
+                          {voucher > 0 && (
                             <div className="flex justify-between">
-                              <span>Discount:</span>
-                              <span className="text-red-600">-{formatPrice(order.discountAmount)}</span>
+                              <span>Voucher:</span>
+                              <span className="text-red-600">-{formatPrice(voucher)}</span>
                             </div>
                           )}
                           <div className="flex justify-between">
@@ -388,31 +460,42 @@ const Orders = () => {
                       {/* Calculate subtotal as sum of all item totals, rounding after each step */}
                       {(() => {
                         const subtotal = order.items.reduce((sum, item) => {
-                          let variationAdjustment = 0;
-                          if (item.variationDetails && Array.isArray(item.variationDetails)) {
-                            variationAdjustment = item.variationDetails.reduce(
-                              (s, v) => s + (v.priceAdjustment || 0),
-                              0
-                            );
+                          const capitalValue = item.capital || 0;
+                          let markup = 0;
+                          if (item.additionalCapital) {
+                            if (item.additionalCapital.type === 'percent') {
+                              markup = capitalValue * (item.additionalCapital.value / 100);
+                            } else {
+                              markup = item.additionalCapital.value || 0;
+                            }
                           }
-                          let basePrice = (item.price || 0) + variationAdjustment;
-                          const discount = item.discount ? (basePrice * (item.discount / 100)) : 0;
-                          const finalPrice = Math.round((basePrice - discount) * 100) / 100;
-                          const itemTotal = Math.round((finalPrice * (item.quantity || 1)) * 100) / 100;
+                          const subtotalBase = capitalValue + markup;
+                          const vatPercent = item.vat || 0;
+                          const vatAmount = subtotalBase * (vatPercent / 100);
+                          const basePrice = subtotalBase + vatAmount;
+                          const variationAdjustment = item.variationAdjustment || 0;
+                          const discountPercent = item.discount || 0;
+                          const discountedPrice = (basePrice * (1 - discountPercent / 100)) + variationAdjustment;
+                          const priceWithVariation = basePrice + variationAdjustment;
+                          const finalPrice = discountPercent > 0 ? discountedPrice : priceWithVariation;
+                          const quantity = item.quantity || 1;
+                          const itemTotal = Math.round((finalPrice * quantity) * 100) / 100;
                           return Math.round((sum + itemTotal) * 100) / 100;
                         }, 0);
-                        const total = Math.round((subtotal + (order.shippingFee || 0)) * 100) / 100;
+                        const discount = order.discountAmount || 0;
+                        const voucher = order.voucherAmount || 0;
+                        const shipping = order.shippingFee || 0;
+                        const total = Math.round((subtotal - discount - voucher + shipping) * 100) / 100;
                         return (
                           <>
                             <p className="text-sm text-gray-500">
                               Subtotal: {formatPrice(subtotal)}
                             </p>
-                            {/* Show only one discount type at a time */}
-                            {order.voucherAmount > 0 && order.discountAmount === 0 && (
-                              <p className="text-sm text-gray-500">Discount: -{formatPrice(order.voucherAmount)}</p>
+                            {discount > 0 && (
+                              <p className="text-sm text-gray-500">Discount: -{formatPrice(discount)}</p>
                             )}
-                            {order.discountAmount > 0 && order.voucherAmount === 0 && (
-                              <p className="text-sm text-gray-500">Discount: -{formatPrice(order.discountAmount)}</p>
+                            {voucher > 0 && (
+                              <p className="text-sm text-gray-500">Voucher: -{formatPrice(voucher)}</p>
                             )}
                             <p className="text-sm text-gray-500">
                               Shipping Fee: {order.shippingFee !== undefined ? formatPrice(order.shippingFee) : 'N/A'}
@@ -437,6 +520,22 @@ const Orders = () => {
                       >
                         <FiTruck className="mr-1" />
                         {loadingTrackingId === order.orderId ? "Loading..." : "Track Order"}
+                      </button>
+                    )}
+                    {/* Pay Now Button for unpaid, non-COD orders */}
+                    {(!order.payment && order.paymentMethod?.toLowerCase() !== "cod") && (
+                      <button
+                        onClick={() => {
+                          console.log('Pay Now button clicked for order:', order);
+                          console.log('backendUrl:', backendUrl);
+                          console.log('token:', token);
+                          const apiUrl = `${backendUrl}/api/order/${order.orderId}/stripe-checkout`;
+                          console.log('Pay Now API URL:', apiUrl);
+                          handlePayNow(order);
+                        }}
+                        className="flex items-center px-4 py-2 text-xs font-medium text-white transition-colors bg-green-600 rounded hover:bg-green-700"
+                      >
+                        Pay Now
                       </button>
                     )}
                   </div>
@@ -579,5 +678,27 @@ const Orders = () => {
     </div>
   );
 };
+
+// Handler for Pay Now button
+const handlePayNow = async (order) => {
+  console.log('Pay Now button clicked for order:', order);
+  console.log('backendUrl:', backendUrl);
+  console.log('token:', token);
+  const apiUrl = `${backendUrl}/api/order/${order.orderId}/stripe-checkout`;
+  console.log('Pay Now API URL:', apiUrl);
+  try {
+    // Call backend to get payment link
+    const { data } = await axios.post(apiUrl, {}, { headers: { token } });
+    if (data.session_url) {
+      window.location.href = data.session_url; // Redirect to Stripe Checkout
+    } else {
+      toast.error("Failed to get payment link.");
+    }
+  } catch (error) {
+    console.error('Error in handlePayNow:', error);
+    toast.error(error?.response?.data?.message || "Failed to get payment link.");
+  }
+};
+
 // ===================== Export =====================
 export default Orders;

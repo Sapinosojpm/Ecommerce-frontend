@@ -333,17 +333,12 @@ const Product = () => {
     if (productData) {
       setImage(productData.image[0]);
       if (productData.variations?.length > 0) {
-        const initialSelections = {};
-        productData.variations.forEach((variation) => {
-          if (variation.options.length > 0) {
-            const firstInStockOption =
-              variation.options.find((opt) => opt.quantity > 0) ||
-              variation.options[0];
-            initialSelections[variation.name] = firstInStockOption;
-          }
-        });
+        // Only select the first variation group and its first in-stock option by default
+        const firstVariation = productData.variations[0];
+        const firstOption = firstVariation.options.find(opt => opt.quantity > 0) || firstVariation.options[0];
+        const initialSelections = { [firstVariation.name]: firstOption };
         setSelectedVariations(initialSelections);
-        setActiveVariationName(productData.variations[0].name);
+        setActiveVariationName(firstVariation.name);
         calculatePrice(initialSelections);
         updateAvailableQuantity(initialSelections);
       } else {
@@ -390,13 +385,6 @@ const Product = () => {
 
     return Object.keys(defaultVariations).length > 0 ? defaultVariations : null;
   };
-
-  // Only allow add to cart/buy now if all variations are selected
-  const allVariationsSelected = productData?.variations
-    ? productData.variations.every(
-        (variation) => selectedVariations[variation.name]
-      )
-    : true;
 
   return (
     <div className="container px-4 py-12 mx-auto my-20 product-page">
@@ -449,25 +437,51 @@ const Product = () => {
             </h1>
 
             <div className="mb-5 text-xl font-medium text-gray-800">
-              {productData.discount && productData.discount > 0 ? (
+              {(() => {
+                const capital = productData.capital || 0;
+                let markup = 0;
+                if (productData.additionalCapital) {
+                  if (productData.additionalCapital.type === 'percent') {
+                    markup = capital * (productData.additionalCapital.value / 100);
+                  } else {
+                    markup = productData.additionalCapital.value || 0;
+                  }
+                }
+                const subtotal = capital + markup;
+                const vatPercent = productData.vat || 0;
+                const vatAmount = subtotal * (vatPercent / 100);
+                // Base price does NOT include variation
+                const basePrice = subtotal + vatAmount;
+                // Variation adjustment: only use the active variation's selected option
+                let variationAdjustment = 0;
+                if (activeVariationName && selectedVariations[activeVariationName]) {
+                  variationAdjustment = selectedVariations[activeVariationName].priceAdjustment || 0;
+                }
+                const discountPercent = productData.discount || 0;
+                // Discounted price: (base price * (1 - discount%)) + variationAdjustment
+                const discountedPrice = (basePrice * (1 - discountPercent / 100)) + variationAdjustment;
+                // For no discount, only add variationAdjustment once
+                if (discountPercent > 0) {
+                  return (
                 <>
                   <span className="ml-2 text-gray-500 line-through">
-                    {currency}
-                    {productData.price.toLocaleString()}
+                        {currency}{basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </span>
-
                   <span className="ml-2 text-lg font-semibold text-green-600">
-                    {currency}
-                    {finalPrice.toFixed(2)}
+                        {currency}{discountedPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </span>
-                  <span className="ml-2 text-sm text-red-500">{`${productData.discount}% off`}</span>
+                      <span className="ml-2 text-sm text-red-500 bg-red-100 px-2 py-1 rounded">{discountPercent}% off</span>
                 </>
-              ) : (
+                  );
+                } else {
+                  // Only add variationAdjustment once
+                  return (
                 <span>
-                  {currency}
-                  {finalPrice.toFixed(2)}
+                      {currency}{(basePrice + variationAdjustment).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </span>
-              )}
+                  );
+                }
+              })()}
             </div>
 
             {productData.variations?.length > 0 && (
@@ -575,11 +589,6 @@ const Product = () => {
   text="ADD TO CART"
   successText="Added!"
   onClick={() => {
-    if (!allVariationsSelected) {
-      toast.error("Please select all variations.");
-      return;
-    }
-    // PATCH: Only include the currently active variation in selectedVars
     const selectedVars = {};
     if (activeVariationName && selectedVariations[activeVariationName]) {
       selectedVars[activeVariationName] = {
@@ -590,21 +599,17 @@ const Product = () => {
     addToCart(
       productData._id,
       quantity,
-      selectedVars
+      selectedVars,
+      finalPrice
     );
   }}
   icon={<FaShoppingCart className="w-6 h-6 text-white" />}
-  disabled={selectedVariationQuantity === 0 || !allVariationsSelected}
+  disabled={selectedVariationQuantity === 0}
 />
                       <AnimatedButton
                         text="BUY NOW"
                         successText="Redirecting..."
                         onClick={() => {
-                          if (!allVariationsSelected) {
-                            toast.error("Please select all variations.");
-                            return;
-                          }
-                          // PATCH: Only include the currently active variation in selectedVars
                           const selectedVars = {};
                           if (activeVariationName && selectedVariations[activeVariationName]) {
                             selectedVars[activeVariationName] = {
@@ -622,7 +627,7 @@ const Product = () => {
                           toast.success("Redirecting to checkout...");
                         }}
                         className="bg-blue-600 hover:bg-blue-700"
-                        disabled={availableQuantity === 0 || !allVariationsSelected}
+                        disabled={availableQuantity === 0}
                       />
 
                       <WishlistIcon

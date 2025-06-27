@@ -110,20 +110,38 @@ const Collection = () => {
 
     // Calculate the lowest possible price (base + lowest variation adjustment, minus discount)
     productCopy = productCopy.map((item) => {
+      // Compute base price (capital + markup + VAT)
+      const capital = item.capital || 0;
+      let markup = 0;
+      if (item.additionalCapital) {
+        if (item.additionalCapital.type === 'percent') {
+          markup = capital * (item.additionalCapital.value / 100);
+        } else {
+          markup = item.additionalCapital.value || 0;
+        }
+      }
+      const subtotal = capital + markup;
+      const vatPercent = item.vat || 0;
+      const vatAmount = subtotal * (vatPercent / 100);
+      const basePrice = subtotal + vatAmount;
+      // Find lowest variation adjustment
       let minAdjustment = 0;
       if (item.variations && item.variations.length > 0) {
         minAdjustment = Math.min(
           ...item.variations.flatMap(v => v.options.map(o => o.priceAdjustment || 0))
         );
       }
-      let displayPrice = item.price + minAdjustment;
-      if (item.discount > 0) {
-        displayPrice = displayPrice * (1 - item.discount / 100);
-      }
+      const displayPrice = basePrice + minAdjustment;
+      const discountPercent = item.discount || 0;
+      const discountedPrice = displayPrice * (1 - discountPercent / 100);
+      // Debug log
+      console.log('COLLECTION PRICE DEBUG:', { name: item.name, capital, markup, subtotal, vatPercent, vatAmount, basePrice, minAdjustment, displayPrice, discountPercent, discountedPrice });
       return {
         ...item,
-        finalPrice: item.discount && item.discount > 0 ? item.price * (1 - item.discount / 100) : item.price,
-        displayPrice,
+        basePrice,
+        displayPrice: discountPercent > 0 ? discountedPrice : displayPrice,
+        originalDisplayPrice: displayPrice,
+        discountPercent,
       };
     });
 
@@ -341,6 +359,9 @@ const Collection = () => {
                     id={item.data._id}
                     quantity={item.data.quantity}
                     price={item.data.price}
+                    capital={item.data.capital}
+                    additionalCapital={item.data.additionalCapital}
+                    vat={item.data.vat} 
                     discount={item.data.discount}
                     video={item.data.video}
                     image={item.data.image}

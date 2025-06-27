@@ -48,6 +48,7 @@ const RelatedProducts = ({ category, excludeId }) => {
                 image={item.image}
                 discount={item.discount}
                 description={item.description}
+                variations={item.variations}
               />
             </div>
           ))

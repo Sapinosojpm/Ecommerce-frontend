@@ -3,7 +3,7 @@ import { ShopContext } from "../context/ShopContext";
 import { Link } from "react-router-dom";
 import { useSpring, animated } from "@react-spring/web";
 
-const ProductItem = ({ id, name, price, discount, image, video, quantity, description, displayPrice }) => {
+const ProductItem = ({ id, name, price, discount, variationAdjustment, image, video, quantity, description, displayPrice, capital, additionalCapital, vat, variations }) => {
   const { currency, handleBuyNow } = useContext(ShopContext);
   const [productData, setProductData] = useState({
     _id: id,
@@ -14,6 +14,11 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
     image: Array.isArray(image) ? image[0] : image,
     video: video || "",
     description: description || "",
+    capital: capital,
+    additionalCapital: additionalCapital,
+    variationAdjustment: variationAdjustment,
+    vat: vat,
+    variations: variations || [],
   });
   const [hovered, setHovered] = useState(false);
   const videoRef = useRef(null);
@@ -41,9 +46,10 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
         image: Array.isArray(image) ? image[0] : image,
         video: video || "",
         description: description || "",
+        variations: variations || [],
       }));
     }
-  }, [id, name, price, discount, image, video, description]);
+  }, [id, name, price, discount, image, video, description, variations]);
 
   const handleMouseEnter = () => {
     setHovered(true);
@@ -60,7 +66,39 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
     }
   };
 
-  const mainPrice = typeof displayPrice === 'number' ? displayPrice : (discount ? price - price * (discount / 100) : price);
+  // Price calculation logic
+  const capitalValue = productData.capital || 0;
+  let markup = 0;
+  if (productData.additionalCapital) {
+    if (productData.additionalCapital.type === 'percent') {
+      markup = capitalValue * (productData.additionalCapital.value / 100);
+    } else {
+      markup = productData.additionalCapital.value || 0;
+    }
+  }
+  const subtotal = capitalValue + markup;
+  const vatPercent = productData.vat || 0;
+  const vatAmount = subtotal * (vatPercent / 100);
+
+  // === First Variation Adjustment ===
+  let firstVariationAdjustment = 0;
+  let firstVariationLabel = '';
+  if (productData.variations && productData.variations.length > 0) {
+    const firstVar = productData.variations[0];
+    if (firstVar && firstVar.options && firstVar.options.length > 0) {
+      const firstOpt = firstVar.options[0];
+      firstVariationAdjustment = firstOpt.priceAdjustment || 0;
+      firstVariationLabel = `${firstVar.name}: ${firstOpt.name}`;
+    }
+  }
+
+  const basePrice = subtotal + vatAmount; // base price: capital + markup + VAT (no variation adj)
+  const discountPercent = productData.discount || 0;
+  // Discounted price: (base price * (1 - discount%)) + first variation adj
+  const discountedPrice = (basePrice * (1 - discountPercent / 100)) + firstVariationAdjustment;
+  const priceWithVariation = basePrice + firstVariationAdjustment;
+  // Debug log
+  console.log('PRODUCT ITEM PRICE DEBUG:', { capitalValue, markup, subtotal, vatPercent, vatAmount, basePrice, firstVariationAdjustment, discountedPrice });
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -169,19 +207,20 @@ const ProductItem = ({ id, name, price, discount, image, video, quantity, descri
 
         {/* Price Section */}
         <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center space-x-2">
-            {discount ? (
+          <div className="flex flex-col items-start space-y-1">
+            {discountPercent > 0 ? (
               <div className="flex items-center space-x-2">
-                <span className="text-xl font-bold text-[#088395]">
-                  {currency}{mainPrice.toLocaleString()}
-                </span>
                 <span className="text-sm font-medium text-gray-400 line-through">
-                  {currency}{price.toLocaleString()}
+                  {currency}{basePrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </span>
+                <span className="text-xl font-bold text-[#088395]">
+                  {currency}{discountedPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </span>
+                <span className="ml-2 text-xs text-red-500 bg-red-100 px-2 py-1 rounded">{discountPercent}% off</span>
               </div>
             ) : (
               <span className="text-xl font-bold text-gray-900">
-                {currency}{mainPrice.toLocaleString()}
+                {currency}{priceWithVariation.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
               </span>
             )}
           </div>

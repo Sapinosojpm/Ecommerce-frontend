@@ -145,6 +145,10 @@ const LatestCollection = () => {
               video={item.data.video}
               description={item.data.description}
               createdAt={item.data.createdAt}
+              variations={item.data.variations}
+              capital={item.data.capital}
+              additionalCapital={item.data.additionalCapital}
+              vat={item.data.vat}
             />
           ) : (
             <AdCard key={item.id} ad={item.data} />
