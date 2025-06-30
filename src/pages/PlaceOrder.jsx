@@ -519,16 +519,30 @@ const onSubmitHandler = async (event) => {
     const paymentIntentId = params.get("payment_intent_id");
   
     if (orderId && paymentIntentId) {
-      fetch(`${backendUrl}/api/orders/verify-gcash-payment?orderId=${orderId}&payment_intent_id=${paymentIntentId}`)
+      fetch(`${backendUrl}/api/payment/gcash/verify?orderId=${orderId}&payment_intent_id=${paymentIntentId}`)
         .then(res => res.json())
         .then(data => {
           if (data.success) {
             alert("✅ Payment Successful!");
           } else {
-            alert("❌ Payment Failed!");
+            // Show more detailed error info if available
+            let msg = `❌ Payment Failed!`;
+            if (data.paymentStatus) {
+              msg += `\nStatus: ${data.paymentStatus}`;
+            }
+            if (data.message) {
+              msg += `\nMessage: ${data.message}`;
+            }
+            if (data.paymongoResponse) {
+              msg += `\nPayMongo Response: ` + JSON.stringify(data.paymongoResponse, null, 2);
+            }
+            alert(msg);
           }
         })
-        .catch(err => console.error("Verification Error:", err));
+        .catch(err => {
+          alert("Verification Error: " + err.message);
+          console.error("Verification Error:", err);
+        });
     }
   }, []);
 

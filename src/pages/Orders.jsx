@@ -550,19 +550,21 @@ const Orders = () => {
                       </button>
                     )}
                     {/* Pay Now Button for unpaid, non-COD orders */}
-                    {(!order.payment && order.paymentMethod?.toLowerCase() !== "cod") && (
+                    {(!order.payment && order.paymentMethod?.toLowerCase() !== "cod" && order.status && order.status.trim().toLowerCase() !== "canceled") && (
                       <button
-                        onClick={() => {
-                          console.log('Pay Now button clicked for order:', order);
-                          console.log('backendUrl:', backendUrl);
-                          console.log('token:', token);
-                          const apiUrl = `${backendUrl}/api/order/${order.orderId}/stripe-checkout`;
-                          console.log('Pay Now API URL:', apiUrl);
-                          handlePayNow(order);
-                        }}
+                        onClick={() => handlePayNow(order)}
                         className="flex items-center px-4 py-2 text-xs font-medium text-white transition-colors bg-green-600 rounded hover:bg-green-700"
                       >
                         Pay Now
+                      </button>
+                    )}
+                    {/* Cancel Order Button for eligible orders */}
+                    {order.status && order.status.trim().toLowerCase() === "order placed" && !order.payment && (
+                      <button
+                        onClick={() => handleCancelOrder(order.orderId)}
+                        className="flex items-center px-4 py-2 text-xs font-medium text-white transition-colors bg-red-600 rounded hover:bg-red-700"
+                      >
+                        Cancel Order
                       </button>
                     )}
                   </div>
@@ -708,22 +710,85 @@ const Orders = () => {
 
 // Handler for Pay Now button
 const handlePayNow = async (order) => {
-  console.log('Pay Now button clicked for order:', order);
-  console.log('backendUrl:', backendUrl);
-  console.log('token:', token);
-  const apiUrl = `${backendUrl}/api/order/${order.orderId}/stripe-checkout`;
-  console.log('Pay Now API URL:', apiUrl);
   try {
-    // Call backend to get payment link
-    const { data } = await axios.post(apiUrl, {}, { headers: { Authorization: `Bearer ${token}` } });
-    if (data.session_url) {
-      window.location.href = data.session_url; // Redirect to Stripe Checkout
+    let apiUrl;
+    let paymentType = order.paymentMethod?.toLowerCase();
+
+    if (paymentType === "gcash") {
+      if (order.orderId) {
+        // Existing order: use new endpoint
+        apiUrl = `${backendUrl}/api/payment/gcash/pay/${order.orderId}`;
+        const { data } = await axios.post(
+          apiUrl,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (data.success && data.paymentUrl) {
+          window.location.href = data.paymentUrl;
+        } else {
+          toast.error(data.message || "Failed to get payment link.");
+        }
+        return;
+      } else {
+        // New order (should not happen from Orders page, but fallback)
+        apiUrl = `${backendUrl}/api/payment/gcash`;
+        let payload = {
+          userId: order.userId,
+          items: order.items,
+          address: order.address,
+          region: order.region,
+          amount: order.amount,
+          voucherCode: order.voucherCode,
+          voucherAmount: order.voucherAmount,
+          variationAdjustment: order.variationAdjustment,
+          shippingFee: order.shippingFee,
+        };
+        const { data } = await axios.post(
+          apiUrl,
+          payload,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        if (data.success && data.paymentUrl) {
+          window.location.href = data.paymentUrl;
+        } else {
+          toast.error(data.message || "Failed to get payment link.");
+        }
+        return;
+      }
     } else {
-      toast.error("Failed to get payment link.");
+      // Stripe logic (unchanged)
+      apiUrl = `${backendUrl}/api/order/${order.orderId}/stripe-checkout`;
+      const { data } = await axios.post(
+        apiUrl,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (data.session_url) {
+        window.location.href = data.session_url;
+      } else {
+        toast.error("Failed to get payment link.");
+      }
     }
   } catch (error) {
     console.error('Error in handlePayNow:', error);
     toast.error(error?.response?.data?.message || "Failed to get payment link.");
+  }
+};
+
+// Cancel Order handler
+const handleCancelOrder = async (orderId) => {
+  if (!window.confirm("Are you sure you want to cancel this order?")) return;
+  try {
+    await axios.put(
+      `${backendUrl}/api/order/cancel/${orderId}`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    toast.success("Order canceled successfully.");
+    setActiveTab("canceled");
+    loadOrderData(); // Refresh orders
+  } catch (error) {
+    toast.error(error?.response?.data?.message || "Failed to cancel order.");
   }
 };
 
