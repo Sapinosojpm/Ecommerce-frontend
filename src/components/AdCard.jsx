@@ -82,7 +82,7 @@ const AdCard = ({ ad, index }) => {
           className="m-5 overflow-hidden bg-white border border-gray-100 rounded-t-lg"
           style={useSpring({ opacity: 1, y: 0, from: { opacity: 0, y: 20 } })}
         >
-          <div className="relative aspect-square">
+          <div className="relative w-72 h-72">
             {/* Video (if available) */}
             {ad.video && (
               <video

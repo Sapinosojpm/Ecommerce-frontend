@@ -112,6 +112,7 @@ const PlaceOrder = () => {
   const orderItems = buyNowItem
     ? [{
         ...buyNowItem,
+        productId: buyNowItem._id,
         price: buyNowItem.price,
         variationAdjustment: buyNowItem.variationDetails && Array.isArray(buyNowItem.variationDetails)
           ? buyNowItem.variationDetails.reduce((sum, v) => sum + (v.priceAdjustment || 0), 0)
@@ -173,6 +174,7 @@ const PlaceOrder = () => {
           const finalPrice = discountPercent > 0 ? discountedPrice : priceWithVariation;
           return {
             ...itemInfo,
+            productId: itemInfo._id,
             _id: itemInfo._id,
             price: itemInfo.price,
             variationAdjustment,
