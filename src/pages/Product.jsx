@@ -26,7 +26,7 @@ const Product = () => {
   const [image, setImage] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [userRole, setUserRole] = useState(
-    localStorage.getItem("role") || null
+    (localStorage.getItem("role") || "").toLowerCase() || null
   );
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [hovering, setHovering] = useState(false);
@@ -326,7 +326,7 @@ const Product = () => {
   }, [selectedVariations, productId]);
 
   useEffect(() => {
-    setUserRole(localStorage.getItem("role") || null);
+    setUserRole((localStorage.getItem("role") || "").toLowerCase() || null);
   }, []);
 
   useEffect(() => {
@@ -470,7 +470,7 @@ const Product = () => {
                   <span className="ml-2 text-lg font-semibold text-green-600">
                         {currency}{discountedPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                   </span>
-                      <span className="ml-2 text-sm text-red-500 bg-red-100 px-2 py-1 rounded">{discountPercent}% off</span>
+                      <span className="px-2 py-1 ml-2 text-sm text-red-500 bg-red-100 rounded">{discountPercent}% off</span>
                 </>
                   );
                 } else {
