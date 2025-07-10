@@ -100,7 +100,11 @@ const OurPolicy = () => {
             >
               <div className="inline-flex items-center justify-center w-16 h-16 mb-4 transition-colors duration-300 bg-gray-100 rounded-full group-hover:bg-gray-900">
                 <img 
-                  src={`${import.meta.env.VITE_BACKEND_URL}${policy.image}`} 
+                  src={
+                    policy.image?.startsWith('http')
+                      ? policy.image
+                      : `${import.meta.env.VITE_BACKEND_URL}${policy.image || ''}`
+                  }
                   alt={policy.title} 
                   className="object-contain w-8 h-8 transition-all duration-300 group-hover:brightness-0 group-hover:invert" 
                   onError={(e) => {

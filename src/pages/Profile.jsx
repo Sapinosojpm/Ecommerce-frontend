@@ -193,43 +193,60 @@ const Profile = () => {
     };
     reader.readAsDataURL(file);
 
-    // Upload to backend
-    const formDataUpload = new FormData();
-    formDataUpload.append('profilePicture', file);
-
+    // 1. Request a pre-signed URL from the backend
     const token = localStorage.getItem('token');
     if (!token) {
       throw new Error('Authentication token missing');
     }
-
-    const response = await fetch(`${backendUrl}/api/profile/upload`, {
+    const presignRes = await fetch(`${backendUrl}/api/upload/presigned-url`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${token}`, // use standard Bearer token
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       },
-      body: formDataUpload,
+      body: JSON.stringify({ fileType: file.type }),
     });
+    if (!presignRes.ok) {
+      throw new Error('Failed to get S3 pre-signed URL');
+    }
+    const { uploadUrl, fileUrl } = await presignRes.json();
 
-    if (!response.ok) {
-      // Try parse JSON error, fallback to default
-      let errorMessage = 'Failed to upload image';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorMessage;
-      } catch {
-        // Not JSON error response
-      }
-      throw new Error(errorMessage);
+    // 2. Upload the file directly to S3
+    const s3Res = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': file.type,
+      },
+      body: file,
+    });
+    if (!s3Res.ok) {
+      throw new Error('Failed to upload image to S3');
     }
 
-    const result = await response.json();
+    // 3. Send the S3 URL to the backend to update the profile picture
+    const updateRes = await fetch(`${backendUrl}/api/profile/upload`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ profilePicture: fileUrl }),
+    });
+    if (!updateRes.ok) {
+      let errorMessage = 'Failed to update profile picture';
+      try {
+        const errorData = await updateRes.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch {}
+      throw new Error(errorMessage);
+    }
+    const result = await updateRes.json();
     setFormData(prev => ({ ...prev, profilePicture: result.profilePictureUrl }));
     setUserDetails(prev => ({ ...prev, profilePicture: result.profilePictureUrl }));
     toast.success('Profile picture updated successfully!', {
       position: 'top-right',
       autoClose: 3000,
     });
-
   } catch (error) {
     console.error('Image upload error:', error);
     setError(error.message);
