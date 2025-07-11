@@ -26,10 +26,6 @@ const RelatedProducts = ({ category, excludeId }) => {
     setRelated(filteredProducts.slice(0, 5));
   }, [products, category, excludeId]);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   return (
     <div className="my-24 md:px-[7vw]">
       <div className="py-2 text-3xl text-center">
@@ -39,7 +35,7 @@ const RelatedProducts = ({ category, excludeId }) => {
       <div className="grid gap-4 grid-cols sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-y-6">
         {related.length > 0 ? (
           related.map((item) => (
-            <div key={item._id} onClick={scrollToTop}>
+            <div key={item._id}>
               <ProductItem
                 id={item._id}
                 name={item.name}

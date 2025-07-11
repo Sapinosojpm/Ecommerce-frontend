@@ -1,6 +1,6 @@
 // Import React Router
 import { Routes, Route } from "react-router-dom";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 // Import Components
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";
@@ -29,6 +29,7 @@ import JobPostingPopup from "./components/JobPostingPopup";
 import OrderStatus from "./components/OrderStatus";
 import VerifyPayment from "./components/VerifyPayment";
 import TrailCursor from "./components/TrailCursor";
+import Lenis from 'lenis';
 // Import Context Providers
 import ShopProvider from "./context/ShopContext";
 import WishlistProvider from "./context/WishlistContext";
@@ -44,6 +45,23 @@ import ReturnProduct from "./components/returnProduct";
 function App() {
   const [isLiveActive, setIsLiveActive] = useState(true); // Optional: Use your socket for real status
   const [isMaximized, setIsMaximized] = useState(false);
+
+  useEffect(() => {
+    window.lenis = new Lenis({
+      duration: 1.2,
+      smooth: true,
+      lerp: 0.1,
+    });
+    function raf(time) {
+      window.lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+    requestAnimationFrame(raf);
+    return () => {
+      window.lenis.destroy();
+      window.lenis = null;
+    };
+  }, []);
   return (
     <>
       {/* <TrailCursor /> */}

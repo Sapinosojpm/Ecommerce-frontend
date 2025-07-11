@@ -41,9 +41,15 @@ const Product = () => {
   const { search } = useLocation();
   const showReviewForm = new URLSearchParams(search).get("review") === "true";
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Remove the old scrollToTop function and update useLayoutEffect for scroll-to-top
+  useLayoutEffect(() => {
+    if (window.lenis) {
+      window.lenis.scrollTo(0, { immediate: true });
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [productId]);
+  
 
   // Fetch ads data
   useEffect(() => {
@@ -158,25 +164,6 @@ const Product = () => {
       console.error("Error submitting review:", error);
     }
   };
-
-  useLayoutEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.2,
-      smooth: true,
-      lerp: 0.1,
-    });
-
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-
-    requestAnimationFrame(raf);
-
-    return () => {
-      lenis.destroy();
-    };
-  }, []);
 
   useEffect(() => {
     if (productData) {
@@ -398,7 +385,8 @@ const Product = () => {
                   transition={{ duration: 0.2 }}
                   onClick={() => {
                     setImage(item);
-                    scrollToTop();
+                    // Always scroll to top instantly when productId changes
+                    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
                   }}
                   src={item}
                   key={index}

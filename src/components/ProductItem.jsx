@@ -100,10 +100,6 @@ const ProductItem = ({ id, name, price, discount, variationAdjustment, image, vi
   // Debug log
   console.log('PRODUCT ITEM PRICE DEBUG:', { capitalValue, markup, subtotal, vatPercent, vatAmount, basePrice, firstVariationAdjustment, discountedPrice });
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   const truncateDescription = (text, maxLength = 50) => {
     if (text.length > maxLength) {
       return text.slice(0, maxLength) + "...";
@@ -142,7 +138,6 @@ const ProductItem = ({ id, name, price, discount, variationAdjustment, image, vi
       <Link
         className="block cursor-pointer"
         to={`/product/${id}`}
-        onClick={scrollToTop}
       >
         <div className="relative overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
           <div className="relative aspect-square">
