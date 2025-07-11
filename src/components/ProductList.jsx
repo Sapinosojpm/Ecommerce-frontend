@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useMemo } from "react";
+import React, { useState, useEffect, useContext, useMemo } from "react";
 import { ShopContext } from "../context/ShopContext";
 import { motion } from "framer-motion";
 import ProductItem1 from "./ProductItem1";

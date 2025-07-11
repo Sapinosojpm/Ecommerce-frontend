@@ -7,6 +7,45 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { useSocket } from '../context/SocketContext';
 
+// Helper to upload a file to S3 and return the URL, with progress and error handling
+async function uploadToS3(file, token, backendUrl, setProgress) {
+  try {
+    const presignRes = await fetch(`${backendUrl}/api/upload/presigned-url`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ fileType: file.type }),
+    });
+    if (!presignRes.ok) throw new Error('Failed to get S3 pre-signed URL');
+    const { uploadUrl, fileUrl } = await presignRes.json();
+    // Use XMLHttpRequest for progress
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('PUT', uploadUrl);
+      xhr.setRequestHeader('Content-Type', file.type);
+      xhr.upload.onprogress = (e) => {
+        if (setProgress && e.lengthComputable) {
+          setProgress(Math.round((e.loaded / e.total) * 100));
+        }
+      };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve();
+        } else {
+          reject(new Error('Failed to upload file to S3'));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Failed to upload file to S3'));
+      xhr.send(file);
+    });
+    return fileUrl;
+  } catch (err) {
+    throw err;
+  }
+}
+
 const PlaceOrder = () => {
   const {
     navigate,
@@ -47,6 +86,7 @@ const PlaceOrder = () => {
   const [receiptFile, setReceiptFile] = useState(null);
   const [isUploadingReceipt, setIsUploadingReceipt] = useState(false);
   const [orderId, setOrderId] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Debug: Log cartItems and products
   console.log('DEBUG: cartItems in PlaceOrder', cartItems);
@@ -441,19 +481,41 @@ const onSubmitHandler = async (event) => {
 
     if (method === "receipt") {
       setIsUploadingReceipt(true);
-      const formData = new FormData();
-      formData.append("receipt", receiptFile);
-      formData.append("orderData", JSON.stringify({
-        ...orderData,
-        paymentMethod: "receipt_upload"
-      }));
-    
-      response = await axios.post(`${backendUrl}/api/order/upload-receipt`, formData, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "multipart/form-data"
+      setUploadProgress(0);
+      let s3Url = null;
+      if (receiptFile) {
+        try {
+          s3Url = await uploadToS3(receiptFile, token, backendUrl, setUploadProgress);
+          toast.success('Receipt uploaded to S3!');
+          console.log('S3 upload success, URL:', s3Url);
+        } catch (err) {
+          toast.error('Failed to upload receipt to S3: ' + err.message);
+          setLoading(false);
+          setIsUploadingReceipt(false);
+          return;
         }
-      });
+      }
+      try {
+        response = await axios.post(`${backendUrl}/api/order/upload-receipt`, {
+          orderData: {
+            ...orderData,
+            paymentMethod: "receipt_upload"
+          },
+          receiptUrl: s3Url
+        }, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
+        toast.success('Receipt URL sent to backend!');
+        console.log('Backend response:', response.data);
+      } catch (err) {
+        toast.error('Failed to save receipt to backend: ' + (err.response?.data?.message || err.message));
+        setLoading(false);
+        setIsUploadingReceipt(false);
+        return;
+      }
     } else {
       // Handle other payment methods
       switch (method) {
@@ -512,6 +574,7 @@ const onSubmitHandler = async (event) => {
   } finally {
     setLoading(false);
     setIsUploadingReceipt(false);
+    setUploadProgress(0);
   }
 };
   
@@ -715,6 +778,15 @@ const onSubmitHandler = async (event) => {
            loading ? "Placing Order..." : "Place Order"}
         </button>
       </div>
+      {/* Receipt upload progress bar */}
+      {isUploadingReceipt && uploadProgress > 0 && (
+        <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+          <div
+            className="bg-blue-600 h-2.5 rounded-full"
+            style={{ width: `${uploadProgress}%` }}
+          ></div>
+        </div>
+      )}
     </form>
   );
 };

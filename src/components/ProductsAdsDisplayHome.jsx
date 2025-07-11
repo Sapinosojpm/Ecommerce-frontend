@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React,{ useEffect, useState } from "react";
 import axios from "axios";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 

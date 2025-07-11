@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import "../css/AnimatedButton.css";
 
 const AnimatedButton = ({ text, onClick, successText, duration = 2000, icon }) => {

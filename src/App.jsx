@@ -1,6 +1,6 @@
+import React, { useState, useEffect } from 'react';
 // Import React Router
 import { Routes, Route } from "react-router-dom";
-import { useState, useEffect } from 'react';
 // Import Components
 import Navbar from "./components/Navbar";
 import Home from "./pages/Home";

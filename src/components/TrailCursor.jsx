@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import birdGif from "../assets/gif/Bird.gif";
 import "../css/TrailCursor.css";
 

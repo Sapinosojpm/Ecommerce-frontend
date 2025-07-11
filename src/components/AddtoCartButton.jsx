@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import "../css/AddtoCartButton.css";
 
 const AddToCartButton = ({ text = "Add to Cart", duration = 2000 }) => {

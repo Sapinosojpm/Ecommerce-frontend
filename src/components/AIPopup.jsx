@@ -395,13 +395,14 @@ const AIPopup = ({ isOpen, onClose }) => {
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
       <div
-        className={`relative w-[1200px] h-[700px] ${
+        className={`relative w-full max-w-5xl h-auto max-h-[90vh] ${
           isDarkMode ? "bg-[#1E1E1E]" : "bg-white"
         } shadow-2xl rounded-2xl border ${
           isDarkMode ? "border-gray-800" : "border-gray-200"
-        } p-6 flex flex-col space-y-4 transform transition-all duration-300 ${
+        } p-2 sm:p-4 flex flex-col space-y-2 sm:space-y-4 transform transition-all duration-300 ${
           isOpen ? "scale-100" : "scale-95"
         }`}
+        style={{ minHeight: '60vh' }}
       >
         {/* Header */}
         <div className={`flex items-center justify-between pb-3 border-b ${
@@ -461,9 +462,9 @@ const AIPopup = ({ isOpen, onClose }) => {
         </div>
 
         {/* Main Content */}
-        <div className="flex flex-1 space-x-4">
+        <div className="flex flex-1 flex-col md:flex-row md:space-x-4 space-y-4 md:space-y-0 overflow-y-auto">
           {/* Chat Section */}
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col min-w-0">
             <div className={`flex-grow p-2 space-y-4 overflow-y-auto ${
               isDarkMode ? "bg-[#1E1E1E]" : "bg-gray-50"
             } rounded-lg max-h-[500px] scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent`}>
@@ -562,11 +563,11 @@ const AIPopup = ({ isOpen, onClose }) => {
           </div>
 
           {/* Search Results Section */}
-          <div className={`w-[400px] ${
+          <div className={`w-full md:w-[400px] ${
             isDarkMode ? "bg-gray-800" : "bg-gray-50"
           } rounded-xl border ${
             isDarkMode ? "border-gray-700" : "border-gray-200"
-          } p-4 flex flex-col`}>
+          } p-4 flex flex-col min-w-0`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className={`text-lg font-semibold ${
                 isDarkMode ? "text-gray-100" : "text-gray-900"

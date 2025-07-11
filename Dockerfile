@@ -1,33 +1,24 @@
 # Stage 1: Build the React (Vite) app
 FROM node:20-alpine AS build
 
-# Install required dependencies
-RUN apk add --no-cache python3 py3-pip make g++ linux-headers
-
-# Set working directory
 WORKDIR /app
 
-# Copy dependency files and install
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
-# Copy the rest of the app source code
 COPY . .
-
-# Build the app (Vite outputs to 'dist' by default)
 RUN npm run build
-
-# Debug (optional): check build output
-RUN ls -la dist
 
 # Stage 2: Serve with Nginx
 FROM nginx:alpine
 
-# Copy built files from previous stage to Nginx's public directory
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/nginx.conf
 
-# Expose port 80
+# Fix permissions for Nginx temp/cache
+RUN mkdir -p /var/cache/nginx && chown -R nginx:nginx /var/cache/nginx
+
 EXPOSE 80
 
-# Start Nginx
+USER nginx
 CMD ["nginx", "-g", "daemon off;"]

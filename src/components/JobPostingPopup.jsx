@@ -62,12 +62,37 @@ const JobPosting = ({ open, onClose, embedded = false }) => {
                 )}
                 <div className="flex items-center justify-center mb-4 h-24">
                   {jobItem.image ? (
-                    <img src={`${backendUrl}/${jobItem.image.replace(/\\/g, "/")}`} alt={jobItem.title} className="object-cover w-24 h-24 rounded-xl border border-gray-200 shadow-sm" loading="lazy" />
-                  ) : (
-                    <div className="flex items-center justify-center w-20 h-20 bg-blue-50 rounded-xl border border-gray-200">
-                      <FiBriefcase className="text-blue-400 text-3xl" />
-                    </div>
-                  )}
+                    jobItem.image.startsWith('http') ? (
+                      <img 
+                        src={jobItem.image} 
+                        alt={jobItem.title} 
+                        className="object-cover w-24 h-24 rounded-xl border border-gray-200 shadow-sm" 
+                        loading="lazy"
+                        onError={e => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          console.warn('Failed to load job image:', jobItem.image);
+                          e.target.parentNode.querySelector('.job-fallback-icon').style.display = 'flex';
+                        }}
+                      />
+                    ) : (
+                      <img 
+                        src={`${backendUrl}/${jobItem.image.replace(/\\/g, "/")}`} 
+                        alt={jobItem.title} 
+                        className="object-cover w-24 h-24 rounded-xl border border-gray-200 shadow-sm" 
+                        loading="lazy"
+                        onError={e => {
+                          e.target.onerror = null;
+                          e.target.style.display = 'none';
+                          console.warn('Failed to load job image:', jobItem.image);
+                          e.target.parentNode.querySelector('.job-fallback-icon').style.display = 'flex';
+                        }}
+                      />
+                    )
+                  ) : null}
+                  <div className="job-fallback-icon flex items-center justify-center w-20 h-20 bg-blue-50 rounded-xl border border-gray-200" style={{display: jobItem.image ? 'none' : 'flex'}}>
+                    <FiBriefcase className="text-blue-400 text-3xl" />
+                  </div>
                 </div>
                 <h3 className="text-lg font-bold text-gray-800 mb-1 line-clamp-1">{jobItem.title}</h3>
                 <p className="text-gray-600 text-sm mb-4 line-clamp-3 flex-1">{jobItem.description}</p>
@@ -109,14 +134,57 @@ const ApplyModal = ({ job, onClose }) => {
     setFormData({ ...formData, resume: e.target.files[0] });
   };
 
-  const handleSubmit = (e) => {
+  // Helper to upload resume to S3 and return the URL
+  const uploadResumeToS3 = async (file) => {
+    if (!file) return null;
+    try {
+      const presignRes = await fetch(`${backendUrl}/api/upload/presigned-url`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ fileType: file.type }),
+      });
+      if (!presignRes.ok) throw new Error('Failed to get S3 pre-signed URL');
+      const { uploadUrl, fileUrl } = await presignRes.json();
+      const s3Res = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': file.type
+        },
+        body: file,
+      });
+      if (!s3Res.ok) throw new Error('Failed to upload file to S3');
+      return fileUrl;
+    } catch (err) {
+      alert('Resume upload to S3 failed.');
+      return null;
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    const formDataToSend = new FormData();
-    Object.keys(formData).forEach((key) => formDataToSend.append(key, formData[key]));
-    formDataToSend.append("jobId", job._id);
-
-    fetch(`${backendUrl}/api/job-applications`, { method: "POST", body: formDataToSend })
+    let resumeUrl = '';
+    if (formData.resume) {
+      resumeUrl = await uploadResumeToS3(formData.resume);
+      if (!resumeUrl) {
+        setSubmitting(false);
+        return;
+      }
+    }
+    const payload = {
+      ...formData,
+      resume: resumeUrl,
+      jobId: job._id,
+    };
+    fetch(`${backendUrl}/api/job-applications`, {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    })
       .then(() => {
         alert("Application submitted successfully!");
         setSubmitting(false);

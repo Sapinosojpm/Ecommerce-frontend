@@ -17,6 +17,27 @@ import {
   FiClock,
 } from "react-icons/fi";
 
+// Helper to upload a file to S3 and return the URL
+async function uploadToS3(file, token, backendUrl) {
+  const presignRes = await fetch(`${backendUrl}/api/upload/presigned-url`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ fileType: file.type }),
+  });
+  if (!presignRes.ok) throw new Error('Failed to get S3 pre-signed URL');
+  const { uploadUrl, fileUrl } = await presignRes.json();
+  const s3Res = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': file.type },
+    body: file,
+  });
+  if (!s3Res.ok) throw new Error('Failed to upload file to S3');
+  return fileUrl;
+}
+
 const ReturnProduct = () => {
   const { orderId, itemId } = useParams();
   const location = useLocation();
@@ -212,18 +233,16 @@ const ReturnProduct = () => {
       if (returnResponse.data.success) {
         const returnId = returnResponse.data.return._id;
 
-        // If there's evidence, upload it
+        // If there's evidence, upload it to S3 and send the S3 URL to the backend
         if (evidence) {
-          const formData = new FormData();
-          formData.append("images", evidence);
-
+          const s3Url = await uploadToS3(evidence, token, backendUrl);
           await axios.post(
             `${backendUrl}/api/returns/${returnId}/evidence`,
-            formData,
+            { imageUrl: s3Url },
             {
               headers: {
                 token,
-                "Content-Type": "multipart/form-data",
+                'Content-Type': 'application/json',
               },
             }
           );
