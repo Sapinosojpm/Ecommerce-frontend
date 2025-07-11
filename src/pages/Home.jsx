@@ -66,22 +66,6 @@ const Home = () => {
     trackPageView();
   }, []);
 
-  useLayoutEffect(() => {
-    const lenis = new Lenis({
-      smooth: true, // Enables smooth scrolling
-      duration: 1.2, // Adjust smoothness
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)), // Natural easing effect
-    });
-
-    function raf(time) {
-      lenis.raf(time);
-      requestAnimationFrame(raf);
-    }
-    requestAnimationFrame(raf);
-
-    return () => lenis.destroy(); // Cleanup
-  }, []);
-
   if (!components) return <p className="mt-10 text-center text-gray-500">Loading...</p>;
 
   return (
