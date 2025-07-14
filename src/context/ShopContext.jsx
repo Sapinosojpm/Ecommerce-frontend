@@ -126,14 +126,13 @@ const ShopContextProvider = (props) => {
       setBuyNowItem(itemWithVariations);
       navigate("/place-order");
     } catch (error) {
-      console.error("Error in handleBuyNow:", error);
       toast.error("Failed to process Buy Now");
     }
   };
 
   useEffect(() => {
     if (buyNowItem) {
-      console.log("✅ Buy Now Item Set:", buyNowItem);
+      // console.log("✅ Buy Now Item Set:", buyNowItem);
     }
   }, [buyNowItem]);
   useEffect(() => {
@@ -146,7 +145,7 @@ const ShopContextProvider = (props) => {
           setFeePerKilo(response.data.fee);
         }
       } catch (error) {
-        console.error("Error fetching fee per kilo:", error);
+        // console.error("Error fetching fee per kilo:", error);
       }
     };
     fetchFeePerKilo();
@@ -155,7 +154,7 @@ const ShopContextProvider = (props) => {
   const fetchRegions = async () => {
     try {
       const response = await axios.get(`${backendUrl}/api/regions`);
-      console.log("📦 API Response:", response.data);
+      // console.log("📦 API Response:", response.data);
 
       if (Array.isArray(response.data)) {
         const regionData = response.data.reduce((acc, region) => {
@@ -163,13 +162,13 @@ const ShopContextProvider = (props) => {
           return acc;
         }, {});
 
-        console.log("🗺 Processed Region Data:", regionData);
+        // console.log("🗺 Processed Region Data:", regionData);
         setRegions(regionData);
       } else {
         toast.error("Failed to fetch region data.");
       }
     } catch (error) {
-      console.error("❌ Error fetching regions:", error);
+      // console.error("❌ Error fetching regions:", error);
       toast.error("Error loading region data.");
     }
   };
@@ -214,19 +213,19 @@ const ShopContextProvider = (props) => {
   };
 
   const applyDiscount = (discountPercent) => {
-    console.log("🔄 Applying Discount:", discountPercent);
+    // console.log("🔄 Applying Discount:", discountPercent);
     setDiscountPercent(discountPercent);
   };
 
   useEffect(() => {
-    console.log("🔄 Voucher Amount Discount Updated:", voucherAmountDiscount);
+    // console.log("🔄 Voucher Amount Discount Updated:", voucherAmountDiscount);
   }, [voucherAmountDiscount]);
 
   const getDiscountAmount = () => {
     const cartAmount = getCartAmount().amount;
     const discount = (cartAmount * discountPercent) / 100;
 
-    console.log("🎟 Discount Applied:", discount);
+    // console.log("🎟 Discount Applied:", discount);
     return discount || 0;
   };
 
@@ -270,11 +269,11 @@ const ShopContextProvider = (props) => {
   }, []);
 
   useEffect(() => {
-    console.log("🔄 Discount Percent Updated:", discountPercent);
+    // console.log("🔄 Discount Percent Updated:", discountPercent);
   }, [discountPercent]);
 
   useEffect(() => {
-    console.log("📦 Total Cart Weight Updated:", weight);
+    // console.log("📦 Total Cart Weight Updated:", weight);
   }, [weight]);
 
   // Initialize socket connection
@@ -307,7 +306,7 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
     return;
   }
   
-  console.log("🧪 Adding to Cart:", { itemId, quantity, variations, finalPriceOverride });
+  // console.log("🧪 Adding to Cart:", { itemId, quantity, variations, finalPriceOverride });
   const itemInfo = products.find((product) => product._id === itemId);
 
   if (!itemInfo) {
@@ -339,8 +338,8 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
   }
 
   // DEBUG: Log what variations are actually being selected
-  console.log("🔍 Selected Variations:", selectedVariations);
-  console.log("🔍 Number of selected variations:", Object.keys(selectedVariations).length);
+  // console.log("🔍 Selected Variations:", selectedVariations);
+  // console.log("🔍 Number of selected variations:", Object.keys(selectedVariations).length);
 
   // Generate a unique key for this item + variations combination (sorted for consistency)
   let variationKey = 'default';
@@ -351,7 +350,7 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
   }
   const cartItemKey = `${itemId}-${variationKey}`;
 
-  console.log("🔑 Cart Item Key:", cartItemKey);
+  // console.log("🔑 Cart Item Key:", cartItemKey);
 
   // Validate variations and check stock only for selected variations
   if (Object.keys(selectedVariations).length > 0) {
@@ -407,7 +406,7 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
     };
   }
 
-  console.log("🛒 Updated Cart Item:", updatedCart[cartItemKey]);
+  // console.log("🛒 Updated Cart Item:", updatedCart[cartItemKey]);
 
   setCartItems(updatedCart);
 
@@ -454,7 +453,7 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
         return;
       }
     } catch (error) {
-      console.error("Failed to update cart in the database:", error);
+      // console.error("Failed to update cart in the database:", error);
       toast.error(
         error.response?.data?.message ||
         "Failed to update the cart. Please try again."
@@ -471,11 +470,11 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
     }
   }, [token]);
 
-  console.log("Using backend URL:", backendUrl); // Add this to verify the URL
+  // console.log("Using backend URL:", backendUrl); // Add this to verify the URL
   
  // New buyNow function
   const buyNow = async (productId, quantity, variations = null) => {
-    console.log("Buy now :", { itemId, quantity, variations });
+    // console.log("Buy now :", { itemId, quantity, variations });
     if (quantity <= 0) {
       toast.error("Quantity must be greater than 0");
       return;
@@ -512,7 +511,7 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
           { headers: { token } }
         );
       } catch (error) {
-        console.error("Error updating cart:", error);
+        // console.error("Error updating cart:", error);
         toast.error("Failed to update cart for checkout");
       }
     }
@@ -531,7 +530,7 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
         toast.error(response.data.message || "Failed to fetch cards.");
       }
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       toast.error("Unable to load cards. Please try again.");
     }
   };
@@ -551,7 +550,7 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
         toast.error(response.data.message || "Failed to fetch cards.");
       }
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       toast.error("Unable to load intros. Please try again.");
     }
   };
@@ -565,23 +564,23 @@ const addToCart = async (itemId, quantity, variations = null, finalPriceOverride
   const getMemberCardsData = async () => {
     try {
       const response = await axios.get(`${backendUrl}/api/memberCard/list`);
-      console.log("Fetched Member Cards:", response.data); // Debugging Log
+      // console.log("Fetched Member Cards:", response.data); // Debugging Log
 
       if (response.data.success && Array.isArray(response.data.memberCards)) {
         setMemberCards(response.data.memberCards);
       } else {
-        console.warn("Unexpected API response:", response.data);
+        // console.warn("Unexpected API response:", response.data);
         setMemberCards([]); // ✅ Prevent undefined issues
       }
     } catch (error) {
-      console.error("API Fetch Error:", error);
+      // console.error("API Fetch Error:", error);
       setMemberCards([]); // ✅ Prevent undefined issues
     }
   };
 
   useEffect(() => {
     getMemberCardsData(); // Fetch data on mount
-    console.log("Member Cards Data1:", memberCards); // Debugging Log
+    // console.log("Member Cards Data1:", memberCards); // Debugging Log
   }, []);
 
   // Fixed updateQuantity function with proper error handling and consistent API authentication
@@ -646,7 +645,7 @@ const updateQuantity = async (itemId, newQuantity) => {
       return false;
     }
   } catch (error) {
-    console.error("Error updating cart:", error);
+    // console.error("Error updating cart:", error);
     toast.error("Something went wrong. Please try again.");
     return false;
   }
@@ -673,7 +672,7 @@ const updateQuantity = async (itemId, newQuantity) => {
       toast.success("Item removed from cart");
       return true;
     } catch (error) {
-      console.error("Error removing item:", error);
+      // console.error("Error removing item:", error);
       toast.error("Failed to remove item");
       // Revert to previous state on error
       setCartItems(cartItems);
@@ -704,7 +703,7 @@ const updateQuantity = async (itemId, newQuantity) => {
   }, [products]);
 
   useEffect(() => {
-    console.log("📦 Updated Total Weight:", weight);
+    // console.log("📦 Updated Total Weight:", weight);
   }, [weight]);
 
   // Fixed getCartAmount to return the totalWeight properly
@@ -745,14 +744,14 @@ const updateQuantity = async (itemId, newQuantity) => {
       const finalItemPrice = itemPrice + variationAdjustment;
       totalAmount += finalItemPrice * quantity;
       totalWeight += (itemInfo.weight || 0) * quantity;
-      console.log(
-        `🧮 Calculating ${itemInfo.name} x${quantity}:`,
-        `Base: ₱${itemPrice}, +Variation: ₱${variationAdjustment}, Subtotal: ₱${finalItemPrice * quantity}`
-      );
+      // console.log(
+      //   `🧮 Calculating ${itemInfo.name} x${quantity}:`,
+      //   `Base: ₱${itemPrice}, +Variation: ₱${variationAdjustment}, Subtotal: ₱${finalItemPrice * quantity}`
+      // );
     });
     setWeight(totalWeight);
-    console.log("📦 Total Weight:", totalWeight);
-    console.log("💰 Total Amount:", totalAmount);
+    // console.log("📦 Total Weight:", totalWeight);
+    // console.log("💰 Total Amount:", totalAmount);
     return { amount: totalAmount, totalWeight };
   };
 
@@ -783,10 +782,10 @@ const updateQuantity = async (itemId, newQuantity) => {
       // Do NOT remove from localStorage if logged in
       toast.info("Cart has been cleared.");
     } catch (error) {
-      console.error(
-        "Error clearing cart:",
-        error.response?.data || error.message
-      );
+      // console.error(
+      //   "Error clearing cart:",
+      //   error.response?.data || error.message
+      // );
       toast.error(
         error.response?.data?.message ||
           "Something went wrong. Please try again."
@@ -804,7 +803,7 @@ const updateQuantity = async (itemId, newQuantity) => {
         toast.error(response.data.message || "Failed to fetch products.");
       }
     } catch (error) {
-      console.error("Error fetching products:", error);
+      // console.error("Error fetching products:", error);
       toast.error("Unable to load products. Please try again.");
     }
   };
@@ -819,7 +818,7 @@ const updateQuantity = async (itemId, newQuantity) => {
       }
       throw new Error(response.data.message || "Failed to fetch product");
     } catch (error) {
-      console.error("Error fetching product:", error);
+      // console.error("Error fetching product:", error);
       return null;
     }
   };
@@ -850,7 +849,7 @@ const updateQuantity = async (itemId, newQuantity) => {
         setCartItems(normalizedCart);
       }
     } catch (error) {
-      console.error("Error fetching cart:", error);
+      // console.error("Error fetching cart:", error);
       // Do not fallback to localStorage
     }
   };
@@ -876,12 +875,12 @@ const updateQuantity = async (itemId, newQuantity) => {
         if (response.status === 200 && response.data) {
           setUser(response.data);
           localStorage.setItem("user", JSON.stringify(response.data));
-          console.log("Fetched user profile:", response.data);
+          // console.log("Fetched user profile:", response.data);
         }
       } catch (error) {
         setUser({});
         localStorage.removeItem("user");
-        console.error("Failed to fetch user profile:", error);
+        // console.error("Failed to fetch user profile:", error);
       }
     };
     fetchUserProfile();
