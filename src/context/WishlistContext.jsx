@@ -21,8 +21,6 @@ const WishlistProvider = ({ children }) => {
       }
     }
 
-    console.log("Fetching wishlist for:", { userId, token });
-
     if (!token || !userId) return;
 
     fetch(`${backendUrl}/api/wishlist?userId=${userId}`, {
@@ -34,7 +32,6 @@ const WishlistProvider = ({ children }) => {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log("Wishlist response:", data);
         if (data?.wishlist) {
           setWishlist(data.wishlist); // ✅ Now stores full product objects
         } else {
@@ -47,9 +44,6 @@ const WishlistProvider = ({ children }) => {
         setWishlist([]);
       });
   }, []);
-
-  console.log("🔑 Token:", localStorage.getItem("token"));
-  console.log("🆔 User ID:", localStorage.getItem("userId"));
 
   // ✅ Toggle Wishlist Function (Add/Remove)
   const toggleWishlist = async (productId) => {

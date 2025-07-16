@@ -32,7 +32,7 @@ useEffect(() => {
     try {
       const res = await fetch(`${backendUrl}/api/logo`);
       const data = await res.json();
-      console.log("Cloudinary logo URL:", data.imageUrl); // ✅ Debug
+      // console.log("Cloudinary logo URL:", data.imageUrl); // ✅ Debug
       setLogo(data.imageUrl); // Don't prepend backendUrl
     } catch (error) {
       console.error("Error fetching logo:", error);
