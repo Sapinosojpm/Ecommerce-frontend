@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import Lottie from "lottie-react";
 import AIPopup from "./AIPopup";
 import ChatPopup from "./ChatPopup";
-// import LiveChatPopup from "./LiveChat";
 import UserEventCalendarPopup from "./UserEventCalendarPopup";
 import JobPostingPopup from "./JobPostingPopup";
 import FAQPage from "./FAQPage";
@@ -53,9 +52,6 @@ const PopupManager = () => {
           >
             {activePopup === "ai" && <AIPopup isOpen onClose={() => setActivePopup(null)} />}
             {activePopup === "chat" && <ChatPopup isOpen onClose={() => setActivePopup(null)} />}
-            {/* {activePopup === "livechat" && (
-              <LiveChatPopup isOpen onClose={() => setActivePopup(null)} />
-            )} */}
             {activePopup === "event" && <UserEventCalendarPopup isOpen onClose={() => setActivePopup(null)} />}
             {activePopup === "job" && <JobPostingPopup open={true} onClose={() => setActivePopup(null)} />}
             {activePopup === "faq" && <FAQPage isOpen onClose={() => setActivePopup(null)} />}
@@ -77,7 +73,6 @@ const PopupManager = () => {
             {[ 
               { key: "ai", img: assets.bot, label: "AI Chat" },
               { key: "chat", img: assets.message, label: "Message" },
-              // { key: "livechat", img: assets.live_chat, label: "Live Support" },
               { key: "event", img: assets.calendar, label: "Events" },
               { key: "job", img: assets.jobseeker, label: "Job List" },
               { key: "faq", img: assets.question, label: "FAQ" },

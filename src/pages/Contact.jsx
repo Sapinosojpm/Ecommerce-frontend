@@ -171,7 +171,7 @@ const Contact = () => {
           <div className="overflow-hidden shadow-xl rounded-2xl aspect-w-16 aspect-h-9">
             <iframe
               src={`https://maps.google.com/maps?q=${encodeURIComponent(contactData.location)}&output=embed`}
-              width="100%"
+              width="300"
               height="400"
               frameBorder="0"
               allowFullScreen

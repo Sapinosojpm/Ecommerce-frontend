@@ -298,16 +298,6 @@ const handleQuantityChange = async (itemId, newQuantity) => {
             const discountPercent = productData.discount || 0;
             const itemPrice = (basePrice + variationAdjustment) * (1 - discountPercent / 100);
             const itemTotal = Math.round((itemPrice * (item.quantity || 1)) * 100) / 100;
-            // Debug log for each item
-            console.log('DEBUG CART ITEM:', {
-              name: productData.name,
-              basePrice,
-              variationAdjustment,
-              discount: discountPercent,
-              itemPrice,
-              quantity: item.quantity,
-              itemTotal,
-            });
             // --- End CartTotal-like computation ---
 
             let maxStock = productData.quantity;

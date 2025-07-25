@@ -97,8 +97,6 @@ const ProductItem = ({ id, name, price, discount, variationAdjustment, image, vi
   // Discounted price: (base price * (1 - discount%)) + first variation adj
   const discountedPrice = (basePrice * (1 - discountPercent / 100)) + firstVariationAdjustment;
   const priceWithVariation = basePrice + firstVariationAdjustment;
-  // Debug log
-  console.log('PRODUCT ITEM PRICE DEBUG:', { capitalValue, markup, subtotal, vatPercent, vatAmount, basePrice, firstVariationAdjustment, discountedPrice });
 
   const truncateDescription = (text, maxLength = 50) => {
     if (text.length > maxLength) {

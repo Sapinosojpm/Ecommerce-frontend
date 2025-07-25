@@ -65,12 +65,6 @@ build/
 tmp/
 temp/
 
-# Development files
-*.config.js
-eslint.config.js
-postcss.config.js
-tailwind.config.js
-vite.config.js
 
 # Deployment configs
 vercel.json

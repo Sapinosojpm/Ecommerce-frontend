@@ -1048,7 +1048,7 @@ const handleAuthError = (error) => {
                 theme="outline"
                 shape="rectangular"
                 size="large"
-                width="100%"
+                width="300"
                 disabled={loading}
                 text={currentState === "Sign Up" ? "signup_with" : "continue_with"}
               />

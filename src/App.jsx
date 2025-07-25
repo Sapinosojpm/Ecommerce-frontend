@@ -34,16 +34,11 @@ import Lenis from 'lenis';
 import ShopProvider from "./context/ShopContext";
 import WishlistProvider from "./context/WishlistContext";
 import { VoucherAmountProvider } from "./context/VoucherAmountContext"; // ✅ Import correctly
-import LiveSellingUser from "./components/LiveSellingUser";
-import LiveChat from "./components/LiveChat";
-import LiveStreamPopup from "./components/LiveStreamPopup";
-import LiveStreamViewer from "./components/LiveSellingUser";
 import ResetPassword from "./components/ResetPassword";
 import TokenDiagnostic from "./components/TokenDiagnostic";
 import ReturnProduct from "./components/returnProduct";
 // import Cursor from "./components/Cursor";
 function App() {
-  const [isLiveActive, setIsLiveActive] = useState(true); // Optional: Use your socket for real status
   const [isMaximized, setIsMaximized] = useState(false);
 
   useEffect(() => {
@@ -77,24 +72,9 @@ function App() {
               <SearchBar />
               {/* <Cursor /> */}
               <PopupManager />
-              {isLiveActive && !isMaximized && (
-                <LiveStreamPopup onMaximize={() => setIsMaximized(true)} />
-              )}
+           
 
-              {isLiveActive && isMaximized && (
-                <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center">
-                  <div className="relative w-full max-w-5xl aspect-video">
-                    <LiveSellingUser />
-                    <button
-                      className="absolute px-3 py-1 text-white transition bg-red-600 rounded top-3 right-3 hover:bg-red-700"
-                      onClick={() => setIsMaximized(false)}
-                    >
-                      ✕ Close
-                    </button>
-                  </div>
-                </div>
-              )}
-
+           
               <div className="flex-grow">
                 <Routes>
                   <Route
@@ -120,8 +100,6 @@ function App() {
                   <Route path="/job" element={<JobPostingPopup />} />
                   <Route path="/order-status" element={<OrderStatus />} />
                   <Route path="/verify-payment" element={<VerifyPayment />} />
-                  <Route path="/live-selling" element={<LiveSellingUser />} />
-                  <Route path="/live-chat" element={<LiveChat />} />
                 </Routes>
               </div>
 
