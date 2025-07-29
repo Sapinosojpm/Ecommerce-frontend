@@ -105,10 +105,11 @@ const Login = () => {
 
   // Update phone input handler
   const handlePhoneChange = (e) => {
-    const formattedNumber = formatPhoneNumber(e.target.value, selectedCountryCode);
+    // Remove all non-digit characters
+    const rawDigits = e.target.value.replace(/\D/g, '');
     setFormData(prev => ({
       ...prev,
-      phone: formattedNumber
+      phone: rawDigits
     }));
   };
 
@@ -358,7 +359,9 @@ const Login = () => {
         toast.error("Phone number is required for verification");
         return false;
       }
-      if (!/^\+?[1-9]\d{1,14}$/.test(formData.phone)) {
+      // Combine country code and phone digits
+      const fullPhone = `${selectedCountryCode}${formData.phone}`;
+      if (!/^\+?[1-9]\d{9,14}$/.test(fullPhone)) {
         toast.error(
           "Please enter a valid phone number with country code (e.g., +639834567890)"
         );
@@ -651,7 +654,6 @@ const handleAuthError = (error) => {
                   value={formData.phone}
                   onChange={handlePhoneChange}
                   placeholder={getPlaceholder(selectedCountryCode)}
-                  pattern={getPattern(selectedCountryCode)}
                   maxLength={getMaxLength(selectedCountryCode)}
                   className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
@@ -1007,7 +1009,7 @@ const handleAuthError = (error) => {
                 <div className="space-y-2">
                   <ReCAPTCHA
                     ref={recaptchaRef}
-                    sitekey="6Ldf-zArAAAAACFe76Bby2Lrn8BBdxMTSpXfo9_n"
+                    sitekey="6LflqI4rAAAAAFYT63sDfaDDBcodibI2E4AXwwfI"
                     onChange={(value) => {
                       setCaptchaValue(value);
                       setCaptchaError(null);

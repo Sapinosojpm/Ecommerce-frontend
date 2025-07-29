@@ -28,7 +28,14 @@ const Navbar = () => {
   
   const { wishlist } = useContext(WishlistContext);
   const location = useLocation();
-  const [navbarLinks, setNavbarLinks] = useState([]);
+  const defaultNavbarLinks = [
+    { name: "Home", path: "/" },
+    { name: "Product", path: "/collection" },
+    { name: "About", path: "/about" },
+    { name: "Contact", path: "/contact" }
+  ];
+
+  const [navbarLinks, setNavbarLinks] = useState(defaultNavbarLinks);
 
   // Logout Function
   const logout = () => {
@@ -61,9 +68,14 @@ const Navbar = () => {
       try {
         const res = await fetch(`${backendUrl}/api/navbar-links`);
         const data = await res.json();
-        setNavbarLinks(data.filter((link) => link.enabled));
+        if (Array.isArray(data) && data.length > 0) {
+          setNavbarLinks(data.filter((link) => link.enabled));
+        } else {
+          setNavbarLinks(defaultNavbarLinks);
+        }
       } catch (error) {
         console.error("Error fetching navbar links:", error);
+        setNavbarLinks(defaultNavbarLinks);
       }
     };
     fetchLinks();

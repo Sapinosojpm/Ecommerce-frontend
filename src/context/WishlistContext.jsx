@@ -17,7 +17,7 @@ const WishlistProvider = ({ children }) => {
         userId = decoded.id;
         localStorage.setItem("userId", userId);
       } catch (error) {
-        console.error("❌ Error decoding token:", error);
+        console.error("Error decoding token:", error);
       }
     }
 
@@ -33,7 +33,7 @@ const WishlistProvider = ({ children }) => {
       .then((res) => res.json())
       .then((data) => {
         if (data?.wishlist) {
-          setWishlist(data.wishlist); // ✅ Now stores full product objects
+          setWishlist(data.wishlist); //stores full product objects
         } else {
           console.warn("Unexpected wishlist response:", data);
           setWishlist([]);
@@ -45,13 +45,13 @@ const WishlistProvider = ({ children }) => {
       });
   }, []);
 
-  // ✅ Toggle Wishlist Function (Add/Remove)
+  //Toggle Wishlist Function (Add/Remove)
   const toggleWishlist = async (productId) => {
     const token = localStorage.getItem("token");
     const userId = localStorage.getItem("userId");
   
     if (!userId) {
-      console.error("❌ No user ID found!");
+      console.error("No user ID found!");
       return;
     }
   
@@ -59,7 +59,7 @@ const WishlistProvider = ({ children }) => {
   
     try {
       if (isRemoving) {
-        console.log(`🔄 Removing from wishlist: ${productId}`);
+        // console.log(`Removing from wishlist: ${productId}`);
         const response = await fetch(`${backendUrl}/api/wishlist`, {
           method: "DELETE",
           headers: {
@@ -70,12 +70,12 @@ const WishlistProvider = ({ children }) => {
         });
   
         if (response.ok) {
-          setWishlist((prev) => prev.filter((item) => item._id !== productId)); // ✅ Fix: Use _id
+          setWishlist((prev) => prev.filter((item) => item._id !== productId)); //Fix: Use _id
         } else {
-          console.error("❌ Wishlist remove error:", await response.json());
+          console.error("Wishlist remove error:", await response.json());
         }
       } else {
-        console.log(`🔄 Adding to wishlist: ${productId}`);
+        console.log(`Adding to wishlist: ${productId}`);
         const response = await fetch(`${backendUrl}/api/wishlist/add`, {
           method: "POST",
           headers: {
@@ -87,13 +87,13 @@ const WishlistProvider = ({ children }) => {
   
         if (response.ok) {
           const data = await response.json();
-          setWishlist(data.wishlist); // ✅ Ensure full product objects are set
+          setWishlist(data.wishlist); //ensure full product objects are set
         } else {
-          console.error("❌ Wishlist add error:", await response.json());
+          console.error("Wishlist add error:", await response.json());
         }
       }
     } catch (error) {
-      console.error("❌ Wishlist request failed:", error);
+      console.error("Wishlist request failed:", error);
     }
   };
   

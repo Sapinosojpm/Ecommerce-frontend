@@ -154,7 +154,7 @@ const ShopContextProvider = (props) => {
   const fetchRegions = async () => {
     try {
       const response = await axios.get(`${backendUrl}/api/regions`);
-      // console.log("📦 API Response:", response.data);
+      // console.log("API Response:", response.data);
 
       if (Array.isArray(response.data)) {
         const regionData = response.data.reduce((acc, region) => {
@@ -162,13 +162,13 @@ const ShopContextProvider = (props) => {
           return acc;
         }, {});
 
-        // console.log("🗺 Processed Region Data:", regionData);
+        // console.log("Processed Region Data:", regionData);
         setRegions(regionData);
       } else {
         toast.error("Failed to fetch region data.");
       }
     } catch (error) {
-      // console.error("❌ Error fetching regions:", error);
+      // console.error("Error fetching regions:", error);
       toast.error("Error loading region data.");
     }
   };
