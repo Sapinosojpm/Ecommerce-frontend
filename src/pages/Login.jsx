@@ -8,7 +8,14 @@ import FacebookLoginButton from "../components/FacebookLoginButton";
 import validator from "validator";
 import OTPVerification from "../components/OTPVerification";
 import { useLocation } from "react-router-dom"; // Add this import
-import { countryCodes, formatPhoneNumber, getPlaceholder, getPattern, getMaxLength } from "../assets/countryCodes";
+import {
+  countryCodes,
+  formatPhoneNumber,
+  getPlaceholder,
+  getPattern,
+  getMaxLength,
+} from "../assets/countryCodes";
+const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
 
 const Login = () => {
   const location = useLocation(); // Get location to extract URL parameters
@@ -42,19 +49,25 @@ const Login = () => {
   // Sort countries by name and group by region
   const sortedCountries = useMemo(() => {
     const regions = {
-      "Popular": ["+63", "+1", "+44", "+61", "+86", "+91"], // Most used countries
-      "Asia": countryCodes.filter(c => c.code.startsWith("+8") || c.code.startsWith("+9")),
-      "Europe": countryCodes.filter(c => c.code.startsWith("+3") || c.code.startsWith("+4")),
-      "Americas": countryCodes.filter(c => c.code.startsWith("+1") || c.code.startsWith("+5")),
-      "Oceania": countryCodes.filter(c => c.code.startsWith("+6")),
-      "Africa": countryCodes.filter(c => c.code.startsWith("+2"))
+      Popular: ["+63", "+1", "+44", "+61", "+86", "+91"], // Most used countries
+      Asia: countryCodes.filter(
+        (c) => c.code.startsWith("+8") || c.code.startsWith("+9")
+      ),
+      Europe: countryCodes.filter(
+        (c) => c.code.startsWith("+3") || c.code.startsWith("+4")
+      ),
+      Americas: countryCodes.filter(
+        (c) => c.code.startsWith("+1") || c.code.startsWith("+5")
+      ),
+      Oceania: countryCodes.filter((c) => c.code.startsWith("+6")),
+      Africa: countryCodes.filter((c) => c.code.startsWith("+2")),
     };
 
     // Sort each region's countries by name
-    Object.keys(regions).forEach(region => {
+    Object.keys(regions).forEach((region) => {
       if (region === "Popular") {
-        regions[region] = regions[region].map(code => 
-          countryCodes.find(c => c.code === code)
+        regions[region] = regions[region].map((code) =>
+          countryCodes.find((c) => c.code === code)
         );
       } else {
         regions[region].sort((a, b) => a.country.localeCompare(b.country));
@@ -67,9 +80,10 @@ const Login = () => {
   // Update filtered countries when search changes
   useEffect(() => {
     if (searchCountry) {
-      const filtered = countryCodes.filter(country =>
-        country.country.toLowerCase().includes(searchCountry.toLowerCase()) ||
-        country.code.includes(searchCountry)
+      const filtered = countryCodes.filter(
+        (country) =>
+          country.country.toLowerCase().includes(searchCountry.toLowerCase()) ||
+          country.code.includes(searchCountry)
       );
       setFilteredCountries(filtered);
     } else {
@@ -106,10 +120,10 @@ const Login = () => {
   // Update phone input handler
   const handlePhoneChange = (e) => {
     // Remove all non-digit characters
-    const rawDigits = e.target.value.replace(/\D/g, '');
-    setFormData(prev => ({
+    const rawDigits = e.target.value.replace(/\D/g, "");
+    setFormData((prev) => ({
       ...prev,
-      phone: rawDigits
+      phone: rawDigits,
     }));
   };
 
@@ -119,7 +133,7 @@ const Login = () => {
     setShowCountryList(false);
     setSearchCountry("");
     // Clear phone number when country changes
-    setFormData(prev => ({ ...prev, phone: "" }));
+    setFormData((prev) => ({ ...prev, phone: "" }));
   };
 
   // Handle successful login (common function for all login methods)
@@ -191,9 +205,9 @@ const Login = () => {
 
       const endpoint = `${backendUrl}/api/auth/google-auth`;
 
-      const backendResponse = await axios.post(endpoint, { 
+      const backendResponse = await axios.post(endpoint, {
         token: credential,
-        isSignUp: currentState === "Sign Up"
+        isSignUp: currentState === "Sign Up",
       });
 
       console.log("Backend response:", backendResponse.data);
@@ -204,24 +218,31 @@ const Login = () => {
         }
         await handleLoginSuccess(backendResponse.data);
       } else {
-        throw new Error(backendResponse.data.message || "Google authentication failed");
+        throw new Error(
+          backendResponse.data.message || "Google authentication failed"
+        );
       }
     } catch (error) {
       console.error("Google authentication error:", {
         error: error,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
       });
 
       // Handle specific error cases
       if (error.response?.status === 404) {
         toast.error("No account found. Please sign up first.");
       } else if (error.response?.status === 409) {
-        toast.error("An account with this email already exists. Please try logging in instead.");
+        toast.error(
+          "An account with this email already exists. Please try logging in instead."
+        );
       } else if (error.response?.status === 500) {
         toast.error("Server error. Please try again later.");
       } else {
-        toast.error(error.response?.data?.message || "Failed to authenticate with Google. Please try again.");
+        toast.error(
+          error.response?.data?.message ||
+            "Failed to authenticate with Google. Please try again."
+        );
       }
     } finally {
       setLoading(false);
@@ -394,7 +415,6 @@ const Login = () => {
       }
     }
 
-    
     // Forgot Password validation
     else if (currentState === "Forgot Password") {
       if (!formData.email) {
@@ -407,72 +427,72 @@ const Login = () => {
       }
     }
     // Add before the axios.post call in handleSubmit
-console.log('Sending login data:', {
-  email: formData.email,
-  password: formData.password,
-  captcha: captchaValue
-});
+    console.log("Sending login data:", {
+      email: formData.email,
+      password: formData.password,
+      captcha: captchaValue,
+    });
 
     return true;
   };
 
   // Show a friendly message with potential solutions based on error
- // Add this temporarily to your handleAuthError function to see the exact server response
-const handleAuthError = (error) => {
-  console.error("Authentication error:", error);
-  
-  // ADD THESE DEBUG LINES:
-  console.log("=== DEBUG ERROR DETAILS ===");
-  console.log("Status:", error.response?.status);
-  console.log("Response data:", error.response?.data);
-  console.log("Response headers:", error.response?.headers);
-  console.log("Error message from server:", error.response?.data?.message);
-  console.log("============================");
+  // Add this temporarily to your handleAuthError function to see the exact server response
+  const handleAuthError = (error) => {
+    console.error("Authentication error:", error);
 
-  // Extract relevant error information
-  const errorResponse = error.response;
-  const errorStatus = errorResponse?.status;
-  const errorMessage = errorResponse?.data?.message;
+    // ADD THESE DEBUG LINES:
+    console.log("=== DEBUG ERROR DETAILS ===");
+    console.log("Status:", error.response?.status);
+    console.log("Response data:", error.response?.data);
+    console.log("Response headers:", error.response?.headers);
+    console.log("Error message from server:", error.response?.data?.message);
+    console.log("============================");
 
-  // Handle specific known error cases with helpful messages
-  if (errorStatus === 401) {
-    toast.error(
-      "Invalid email or password. Please check your credentials and try again."
-    );
-  } else if (errorStatus === 403) {
-    toast.error(
-      "Your account is locked. Please contact customer support for assistance."
-    );
-  } else if (errorStatus === 404 && currentState === "Login") {
-    toast.error(
-      "We couldn't find an account with that email. Please check your email or create a new account."
-    );
-  } else if (errorStatus === 429) {
-    toast.error(
-      "Too many login attempts. Please try again after a few minutes."
-    );
-  } else if (errorMessage && errorMessage.toLowerCase().includes("captcha")) {
-    toast.error("CAPTCHA verification failed. Please try again.");
-  } else if (errorMessage && errorMessage.toLowerCase().includes("network")) {
-    toast.error(
-      "Connection issue detected. Please check your internet connection and try again."
-    );
-  } else if (errorResponse?.data?.errors) {
-    // Handle specific field validation errors
-    const serverErrors = errorResponse.data.errors;
-    Object.entries(serverErrors).forEach(([field, message]) => {
+    // Extract relevant error information
+    const errorResponse = error.response;
+    const errorStatus = errorResponse?.status;
+    const errorMessage = errorResponse?.data?.message;
+
+    // Handle specific known error cases with helpful messages
+    if (errorStatus === 401) {
       toast.error(
-        `${field.charAt(0).toUpperCase() + field.slice(1)}: ${message}`
+        "Invalid email or password. Please check your credentials and try again."
       );
-    });
-  } else {
-    // Generic error message as fallback
-    toast.error(
-      errorMessage ||
-        "Unable to process your request. Please try again in a few moments."
-    );
-  }
-};
+    } else if (errorStatus === 403) {
+      toast.error(
+        "Your account is locked. Please contact customer support for assistance."
+      );
+    } else if (errorStatus === 404 && currentState === "Login") {
+      toast.error(
+        "We couldn't find an account with that email. Please check your email or create a new account."
+      );
+    } else if (errorStatus === 429) {
+      toast.error(
+        "Too many login attempts. Please try again after a few minutes."
+      );
+    } else if (errorMessage && errorMessage.toLowerCase().includes("captcha")) {
+      toast.error("CAPTCHA verification failed. Please try again.");
+    } else if (errorMessage && errorMessage.toLowerCase().includes("network")) {
+      toast.error(
+        "Connection issue detected. Please check your internet connection and try again."
+      );
+    } else if (errorResponse?.data?.errors) {
+      // Handle specific field validation errors
+      const serverErrors = errorResponse.data.errors;
+      Object.entries(serverErrors).forEach(([field, message]) => {
+        toast.error(
+          `${field.charAt(0).toUpperCase() + field.slice(1)}: ${message}`
+        );
+      });
+    } else {
+      // Generic error message as fallback
+      toast.error(
+        errorMessage ||
+          "Unable to process your request. Please try again in a few moments."
+      );
+    }
+  };
 
   // Add this function after the existing state declarations
   const resetCaptcha = () => {
@@ -578,9 +598,9 @@ const handleAuthError = (error) => {
       }
     } catch (error) {
       handleAuthError(error);
-      
+
       // Handle CAPTCHA specific errors
-      if (error.response?.data?.message?.toLowerCase().includes('captcha')) {
+      if (error.response?.data?.message?.toLowerCase().includes("captcha")) {
         setCaptchaError(error.response.data.message);
         resetCaptcha();
       }
@@ -641,11 +661,24 @@ const handleAuthError = (error) => {
                   className="flex items-center px-3 py-2 space-x-2 border rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <span className="text-xl">
-                    {countryCodes.find(c => c.code === selectedCountryCode)?.flag}
+                    {
+                      countryCodes.find((c) => c.code === selectedCountryCode)
+                        ?.flag
+                    }
                   </span>
                   <span className="text-gray-700">{selectedCountryCode}</span>
-                  <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  <svg
+                    className="w-4 h-4 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
                 <input
@@ -673,40 +706,52 @@ const handleAuthError = (error) => {
                     />
                   </div>
                   <div className="overflow-y-auto max-h-60">
-                    {searchCountry ? (
-                      // Show filtered results
-                      filteredCountries.map((country) => (
-                        <button
-                          key={country.code}
-                          onClick={() => handleCountrySelect(country.code)}
-                          className="flex items-center w-full px-4 py-2 space-x-3 text-left hover:bg-gray-50"
-                        >
-                          <span className="text-xl">{country.flag}</span>
-                          <span className="text-gray-700">{country.country}</span>
-                          <span className="ml-auto text-gray-500">{country.code}</span>
-                        </button>
-                      ))
-                    ) : (
-                      // Show grouped results
-                      Object.entries(sortedCountries).map(([region, countries]) => (
-                        <div key={region}>
-                          <div className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-50">
-                            {region}
-                          </div>
-                          {countries.map((country) => (
-                            <button
-                              key={country.code}
-                              onClick={() => handleCountrySelect(country.code)}
-                              className="flex items-center w-full px-4 py-2 space-x-3 text-left hover:bg-gray-50"
-                            >
-                              <span className="text-xl">{country.flag}</span>
-                              <span className="text-gray-700">{country.country}</span>
-                              <span className="ml-auto text-gray-500">{country.code}</span>
-                            </button>
-                          ))}
-                        </div>
-                      ))
-                    )}
+                    {searchCountry
+                      ? // Show filtered results
+                        filteredCountries.map((country) => (
+                          <button
+                            key={country.code}
+                            onClick={() => handleCountrySelect(country.code)}
+                            className="flex items-center w-full px-4 py-2 space-x-3 text-left hover:bg-gray-50"
+                          >
+                            <span className="text-xl">{country.flag}</span>
+                            <span className="text-gray-700">
+                              {country.country}
+                            </span>
+                            <span className="ml-auto text-gray-500">
+                              {country.code}
+                            </span>
+                          </button>
+                        ))
+                      : // Show grouped results
+                        Object.entries(sortedCountries).map(
+                          ([region, countries]) => (
+                            <div key={region}>
+                              <div className="px-4 py-2 text-sm font-medium text-gray-500 bg-gray-50">
+                                {region}
+                              </div>
+                              {countries.map((country) => (
+                                <button
+                                  key={country.code}
+                                  onClick={() =>
+                                    handleCountrySelect(country.code)
+                                  }
+                                  className="flex items-center w-full px-4 py-2 space-x-3 text-left hover:bg-gray-50"
+                                >
+                                  <span className="text-xl">
+                                    {country.flag}
+                                  </span>
+                                  <span className="text-gray-700">
+                                    {country.country}
+                                  </span>
+                                  <span className="ml-auto text-gray-500">
+                                    {country.code}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )
+                        )}
                   </div>
                 </div>
               )}
@@ -820,10 +865,26 @@ const handleAuthError = (error) => {
                       onClick={() => setShowCountryList(!showCountryList)}
                       className="flex items-center px-3 py-2 text-black bg-white border border-black rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <span className="mr-2">{countryCodes.find(c => c.code === selectedCountryCode)?.flag}</span>
+                      <span className="mr-2">
+                        {
+                          countryCodes.find(
+                            (c) => c.code === selectedCountryCode
+                          )?.flag
+                        }
+                      </span>
                       <span>{selectedCountryCode}</span>
-                      <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                      <svg
+                        className="w-4 h-4 ml-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M19 9l-7 7-7-7"
+                        />
                       </svg>
                     </button>
                     <input
@@ -1009,7 +1070,7 @@ const handleAuthError = (error) => {
                 <div className="space-y-2">
                   <ReCAPTCHA
                     ref={recaptchaRef}
-                    sitekey="6LflqI4rAAAAAFYT63sDfaDDBcodibI2E4AXwwfI"
+                    sitekey={siteKey}
                     onChange={(value) => {
                       setCaptchaValue(value);
                       setCaptchaError(null);
@@ -1024,6 +1085,7 @@ const handleAuthError = (error) => {
                     }}
                     className="my-4"
                   />
+
                   {captchaError && (
                     <p className="text-sm text-red-600">{captchaError}</p>
                   )}
@@ -1040,7 +1102,9 @@ const handleAuthError = (error) => {
           </h3>
 
           <div className="w-full space-y-4">
-            <GoogleOAuthProvider clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}>
+            <GoogleOAuthProvider
+              clientId={import.meta.env.VITE_GOOGLE_CLIENT_ID}
+            >
               <GoogleLogin
                 onSuccess={handleGoogleLoginSuccess}
                 onError={() =>
@@ -1052,12 +1116,14 @@ const handleAuthError = (error) => {
                 size="large"
                 width="300"
                 disabled={loading}
-                text={currentState === "Sign Up" ? "signup_with" : "continue_with"}
+                text={
+                  currentState === "Sign Up" ? "signup_with" : "continue_with"
+                }
               />
             </GoogleOAuthProvider>
 
-            <FacebookLoginButton 
-              disabled={loading} 
+            <FacebookLoginButton
+              disabled={loading}
               onLoginSuccess={handleFacebookLoginSuccess}
               isSignUp={currentState === "Sign Up"}
             />
