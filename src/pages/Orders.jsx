@@ -369,7 +369,7 @@ const Orders = () => {
                                 <img
                                   src={item.image?.[0] || '/placeholder-product.jpg'}
                                   alt={item.name}
-                                  className="w-12 h-12 object-cover rounded"
+                                  className="object-cover w-12 h-12 rounded"
                                 />
                               </td>
                               <td className="px-2 py-1 font-medium text-gray-800">{item.name}</td>
@@ -389,9 +389,9 @@ const Orders = () => {
                               <td className="px-2 py-1 text-right">{formatPrice(variationAdjustment)}</td>
                               <td className="px-2 py-1 text-right">{formatPrice(basePrice)}</td>
                               <td className="px-2 py-1 text-right text-red-600">-{formatPrice(discountAmount)}</td>
-                              <td className="px-2 py-1 text-right text-blue-900 font-semibold">{formatPrice(finalPrice)}</td>
+                              <td className="px-2 py-1 font-semibold text-right text-blue-900">{formatPrice(finalPrice)}</td>
                               <td className="px-2 py-1 text-right">{quantity}</td>
-                              <td className="px-2 py-1 text-right font-bold text-green-700">{formatPrice(itemTotal)}</td>
+                              <td className="px-2 py-1 font-bold text-right text-green-700">{formatPrice(itemTotal)}</td>
                             </tr>
                           );
                         })}
@@ -402,7 +402,7 @@ const Orders = () => {
 
                 {/* ===== Order Summary ===== */}
                 <div className="px-6 pb-4">
-                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="p-4 mt-4 border border-blue-200 rounded-lg bg-blue-50">
                     <div className="mb-2 text-base font-semibold text-blue-700">Order Summary</div>
                     {(() => {
                       const subtotal = order.items.reduce((sum, item) => {
@@ -456,7 +456,7 @@ const Orders = () => {
                             <span>Shipping Fee:</span>
                             <span>{order.shippingFee !== undefined ? formatPrice(order.shippingFee) : 'N/A'}</span>
                           </div>
-                          <div className="flex justify-between text-lg font-bold text-blue-900 mt-2 border-t pt-2 border-blue-200">
+                          <div className="flex justify-between pt-2 mt-2 text-lg font-bold text-blue-900 border-t border-blue-200">
                             <span>Total Payment:</span>
                             <span>{formatPrice(total)}</span>
                           </div>
@@ -550,14 +550,18 @@ const Orders = () => {
                       </button>
                     )}
                     {/* Pay Now Button for unpaid, non-COD orders */}
-                    {(!order.payment && order.paymentMethod?.toLowerCase() !== "cod" && order.status && order.status.trim().toLowerCase() !== "canceled") && (
-                      <button
-                        onClick={() => handlePayNow(order)}
-                        className="flex items-center px-4 py-2 text-xs font-medium text-white transition-colors bg-green-600 rounded hover:bg-green-700"
-                      >
-                        Pay Now
-                      </button>
-                    )}
+                    {/* Pay Now Button for unpaid, non-COD orders */}
+{(!order.payment && 
+  order.paymentMethod?.toLowerCase() !== "cod" && 
+  order.status && 
+  !['canceled', 'payment failed'].includes(order.status.toLowerCase())) && (
+  <button
+    onClick={() => handlePayNow(order)}
+    className="flex items-center px-4 py-2 text-xs font-medium text-white transition-colors bg-green-600 rounded hover:bg-green-700"
+  >
+    Pay Now
+  </button>
+)}
                     {/* Cancel Order Button for eligible orders */}
                     {order.status && order.status.trim().toLowerCase() === "order placed" && !order.payment && (
                       <button
@@ -709,69 +713,45 @@ const Orders = () => {
 };
 
 // Handler for Pay Now button
+// Handler for Pay Now button
 const handlePayNow = async (order) => {
   try {
-    let apiUrl;
-    let paymentType = order.paymentMethod?.toLowerCase();
+    if (!order.orderId) {
+      toast.error("Order ID is missing");
+      return;
+    }
 
-    if (paymentType === "gcash") {
-      if (order.orderId) {
-        // Existing order: use new endpoint
-        apiUrl = `${backendUrl}/api/payment/gcash/pay/${order.orderId}`;
-        const { data } = await axios.post(
-          apiUrl,
-          {},
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (data.success && data.paymentUrl) {
-          window.location.href = data.paymentUrl;
-        } else {
-          toast.error(data.message || "Failed to get payment link.");
-        }
-        return;
-      } else {
-        // New order (should not happen from Orders page, but fallback)
-        apiUrl = `${backendUrl}/api/payment/gcash`;
-        let payload = {
-          userId: order.userId,
-          items: order.items,
-          address: order.address,
-          region: order.region,
-          amount: order.amount,
-          voucherCode: order.voucherCode,
-          voucherAmount: order.voucherAmount,
-          variationAdjustment: order.variationAdjustment,
-          shippingFee: order.shippingFee,
-        };
-        const { data } = await axios.post(
-          apiUrl,
-          payload,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        if (data.success && data.paymentUrl) {
-          window.location.href = data.paymentUrl;
-        } else {
-          toast.error(data.message || "Failed to get payment link.");
-        }
-        return;
-      }
-    } else {
-      // Stripe logic (unchanged)
-      apiUrl = `${backendUrl}/api/order/${order.orderId}/stripe-checkout`;
+    // For Paymongo payments (GCash, GrabPay, Card)
+    if (['gcash', 'grab_pay', 'card'].includes(order.paymentMethod?.toLowerCase())) {
       const { data } = await axios.post(
-        apiUrl,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        `${backendUrl}/api/payment/paymongo/retry`,
+        { orderId: order.orderId },
+        { headers: { token } }
       );
-      if (data.session_url) {
-        window.location.href = data.session_url;
+
+      if (data.success && data.paymentUrl) {
+        window.location.href = data.paymentUrl;
       } else {
-        toast.error("Failed to get payment link.");
+        toast.error(data.message || "Failed to get payment link");
       }
+      return;
+    }
+
+    // For Stripe payments (keep existing logic)
+    const { data } = await axios.post(
+      `${backendUrl}/api/order/${order.orderId}/stripe-checkout`,
+      {},
+      { headers: { token } }
+    );
+    
+    if (data.session_url) {
+      window.location.href = data.session_url;
+    } else {
+      toast.error("Failed to get payment link");
     }
   } catch (error) {
     console.error('Error in handlePayNow:', error);
-    toast.error(error?.response?.data?.message || "Failed to get payment link.");
+    toast.error(error?.response?.data?.message || "Failed to get payment link");
   }
 };
 
