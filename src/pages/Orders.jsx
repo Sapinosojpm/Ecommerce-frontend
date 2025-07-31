@@ -170,32 +170,7 @@ const Orders = () => {
     }
   }, [location.state, setCartItems, setVoucherAmountDiscount]);
 
-  // Stripe payment verification after redirect
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const paymentSuccess = params.get("paymentSuccess");
-    const orderId = params.get("orderId");
-    if (paymentSuccess === "true" && orderId) {
-      axios.post(
-        `${backendUrl}/api/order/verify-stripe`,
-        { orderId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-        .then((res) => {
-          if (res.data.success) {
-            toast.success("Payment verified and order marked as paid!");
-            loadOrderData();
-          } else {
-            toast.error(res.data.message || "Failed to verify payment.");
-          }
-        })
-        .catch((err) => {
-          toast.error(
-            err?.response?.data?.message || "Failed to verify payment."
-          );
-        });
-    }
-  }, [location.search, backendUrl, token]);
+
 
   // ===================== UI Tabs =====================
   const tabs = [
@@ -714,6 +689,7 @@ const Orders = () => {
 
 // Handler for Pay Now button
 // Handler for Pay Now button
+// Update handlePayNow to remove Stripe condition
 const handlePayNow = async (order) => {
   try {
     if (!order.orderId) {
@@ -721,33 +697,17 @@ const handlePayNow = async (order) => {
       return;
     }
 
-    // For Paymongo payments (GCash, GrabPay, Card)
-    if (['gcash', 'grab_pay', 'card'].includes(order.paymentMethod?.toLowerCase())) {
-      const { data } = await axios.post(
-        `${backendUrl}/api/payment/paymongo/retry`,
-        { orderId: order.orderId },
-        { headers: { token } }
-      );
-
-      if (data.success && data.paymentUrl) {
-        window.location.href = data.paymentUrl;
-      } else {
-        toast.error(data.message || "Failed to get payment link");
-      }
-      return;
-    }
-
-    // For Stripe payments (keep existing logic)
+    // Only Paymongo payments remain
     const { data } = await axios.post(
-      `${backendUrl}/api/order/${order.orderId}/stripe-checkout`,
-      {},
+      `${backendUrl}/api/payment/paymongo/retry`,
+      { orderId: order.orderId },
       { headers: { token } }
     );
-    
-    if (data.session_url) {
-      window.location.href = data.session_url;
+
+    if (data.success && data.paymentUrl) {
+      window.location.href = data.paymentUrl;
     } else {
-      toast.error("Failed to get payment link");
+      toast.error(data.message || "Failed to get payment link");
     }
   } catch (error) {
     console.error('Error in handlePayNow:', error);
